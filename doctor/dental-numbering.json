@@ -1,0 +1,99 @@
+{
+  "name": "FDI Dental Numbering System",
+  "description": "FDI (11-18|21-28|31-38|41-48)",
+  "quadrants": {
+    "upper_right": {
+      "label": "الربع الأول (علوي يمين)",
+      "color": "#ef4444",
+      "teeth": [
+        { "number": "11", "name": "القاطع المركزي", "type": "incisor", "icon": "🦷", "position": { "x": 330, "y": 50 } },
+        { "number": "12", "name": "القاطع الجانبي", "type": "incisor", "icon": "🦷", "position": { "x": 300, "y": 50 } },
+        { "number": "13", "name": "الناب", "type": "canine", "icon": "🦷", "position": { "x": 270, "y": 50 } },
+        { "number": "14", "name": "الضاحك الأول", "type": "premolar", "icon": "🦷", "position": { "x": 240, "y": 50 } },
+        { "number": "15", "name": "الضاحك الثاني", "type": "premolar", "icon": "🦷", "position": { "x": 210, "y": 50 } },
+        { "number": "16", "name": "الضرس الأول", "type": "molar", "icon": "🦷", "position": { "x": 180, "y": 50 } },
+        { "number": "17", "name": "الضرس الثاني", "type": "molar", "icon": "🦷", "position": { "x": 150, "y": 50 } },
+        { "number": "18", "name": "ضرس العقل", "type": "molar", "icon": "🦷", "position": { "x": 120, "y": 50 } }
+      ]
+    },
+    "upper_left": {
+      "label": "الربع الثاني (علوي يسار)",
+      "color": "#10b981",
+      "teeth": [
+        { "number": "21", "name": "القاطع المركزي", "type": "incisor", "icon": "🦷", "position": { "x": 370, "y": 50 } },
+        { "number": "22", "name": "القاطع الجانبي", "type": "incisor", "icon": "🦷", "position": { "x": 400, "y": 50 } },
+        { "number": "23", "name": "الناب", "type": "canine", "icon": "🦷", "position": { "x": 430, "y": 50 } },
+        { "number": "24", "name": "الضاحك الأول", "type": "premolar", "icon": "🦷", "position": { "x": 460, "y": 50 } },
+        { "number": "25", "name": "الضاحك الثاني", "type": "premolar", "icon": "🦷", "position": { "x": 490, "y": 50 } },
+        { "number": "26", "name": "الضرس الأول", "type": "molar", "icon": "🦷", "position": { "x": 520, "y": 50 } },
+        { "number": "27", "name": "الضرس الثاني", "type": "molar", "icon": "🦷", "position": { "x": 550, "y": 50 } },
+        { "number": "28", "name": "ضرس العقل", "type": "molar", "icon": "🦷", "position": { "x": 580, "y": 50 } }
+      ]
+    },
+    "lower_left": {
+      "label": "الربع الثالث (سفلي يسار)",
+      "color": "#f59e0b",
+      "teeth": [
+        { "number": "31", "name": "القاطع المركزي", "type": "incisor", "icon": "🦷", "position": { "x": 370, "y": 200 } },
+        { "number": "32", "name": "القاطع الجانبي", "type": "incisor", "icon": "🦷", "position": { "x": 400, "y": 200 } },
+        { "number": "33", "name": "الناب", "type": "canine", "icon": "🦷", "position": { "x": 430, "y": 200 } },
+        { "number": "34", "name": "الضاحك الأول", "type": "premolar", "icon": "🦷", "position": { "x": 460, "y": 200 } },
+        { "number": "35", "name": "الضاحك الثاني", "type": "premolar", "icon": "🦷", "position": { "x": 490, "y": 200 } },
+        { "number": "36", "name": "الضرس الأول", "type": "molar", "icon": "🦷", "position": { "x": 520, "y": 200 } },
+        { "number": "37", "name": "الضرس الثاني", "type": "molar", "icon": "🦷", "position": { "x": 550, "y": 200 } },
+        { "number": "38", "name": "ضرس العقل", "type": "molar", "icon": "🦷", "position": { "x": 580, "y": 200 } }
+      ]
+    },
+    "lower_right": {
+      "label": "الربع الرابع (سفلي يمين)",
+      "color": "#3b82f6",
+      "teeth": [
+        { "number": "41", "name": "القاطع المركزي", "type": "incisor", "icon": "🦷", "position": { "x": 330, "y": 200 } },
+        { "number": "42", "name": "القاطع الجانبي", "type": "incisor", "icon": "🦷", "position": { "x": 300, "y": 200 } },
+        { "number": "43", "name": "الناب", "type": "canine", "icon": "🦷", "position": { "x": 270, "y": 200 } },
+        { "number": "44", "name": "الضاحك الأول", "type": "premolar", "icon": "🦷", "position": { "x": 240, "y": 200 } },
+        { "number": "45", "name": "الضاحك الثاني", "type": "premolar", "icon": "🦷", "position": { "x": 210, "y": 200 } },
+        { "number": "46", "name": "الضرس الأول", "type": "molar", "icon": "🦷", "position": { "x": 180, "y": 200 } },
+        { "number": "47", "name": "الضرس الثاني", "type": "molar", "icon": "🦷", "position": { "x": 150, "y": 200 } },
+        { "number": "48", "name": "ضرس العقل", "type": "molar", "icon": "🦷", "position": { "x": 120, "y": 200 } }
+      ]
+    }
+  },
+  "tooth_types": {
+    "incisor": {
+      "name": "قاطع",
+      "color": "#3b82f6",
+      "width": 24,
+      "height": 16
+    },
+    "canine": {
+      "name": "ناب", 
+      "color": "#10b981",
+      "width": 20,
+      "height": 20
+    },
+    "premolar": {
+      "name": "ضاحك",
+      "color": "#f59e0b",
+      "width": 28,
+      "height": 16
+    },
+    "molar": {
+      "name": "ضرس",
+      "color": "#ef4444",
+      "width": 32,
+      "height": 18
+    }
+  },
+  "treatment_colors": {
+    "healthy": "#4ade80",
+    "caries": "#ef4444", 
+    "filling": "#3b82f6",
+    "crown": "#f59e0b",
+    "root_canal": "#8b5cf6",
+    "extraction": "#6b7280",
+    "implant": "#06b6d4",
+    "bridge": "#f97316",
+    "missing": "#dc2626"
+  }
+}

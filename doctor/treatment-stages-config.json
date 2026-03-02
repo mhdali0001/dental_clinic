@@ -1,0 +1,102 @@
+{
+  "stageStyles": {
+    "completed": {
+      "backgroundColor": "#f0f9ff",
+      "borderColor": "#0ea5e9",
+      "textColor": "#0c4a6e",
+      "icon": "fas fa-check-circle",
+      "iconColor": "#0ea5e9"
+    },
+    "current": {
+      "backgroundColor": "#fefce8",
+      "borderColor": "#eab308",
+      "textColor": "#713f12",
+      "icon": "fas fa-play-circle",
+      "iconColor": "#eab308"
+    },
+    "upcoming": {
+      "backgroundColor": "#f9fafb",
+      "borderColor": "#d1d5db",
+      "textColor": "#6b7280",
+      "icon": "fas fa-clock",
+      "iconColor": "#9ca3af"
+    },
+    "inProgress": {
+      "backgroundColor": "#fef3c7",
+      "borderColor": "#f59e0b",
+      "textColor": "#92400e",
+      "icon": "fas fa-spinner fa-spin",
+      "iconColor": "#f59e0b"
+    }
+  },
+  "progressBarStyles": {
+    "backgroundColor": "#e5e7eb",
+    "fillColor": "#3b82f6",
+    "height": "8px",
+    "borderRadius": "4px"
+  },
+  "compactMode": {
+    "enabled": true,
+    "showCompletionDate": false,
+    "showDuration": true,
+    "showNotes": true,
+    "maxNotesLength": 200
+  },
+  "animations": {
+    "stageTransition": {
+      "duration": "300ms",
+      "easing": "cubic-bezier(0.4, 0, 0.2, 1)"
+    },
+    "progressBar": {
+      "duration": "500ms",
+      "easing": "ease-in-out"
+    }
+  },
+  "typography": {
+    "stageTitle": {
+      "fontSize": "16px",
+      "fontWeight": "600",
+      "lineHeight": "1.5"
+    },
+    "stageDescription": {
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "lineHeight": "1.4"
+    },
+    "stageDuration": {
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "opacity": "0.7"
+    }
+  },
+  "layout": {
+    "spacing": {
+      "stageGap": "12px",
+      "contentPadding": "16px",
+      "iconMargin": "8px"
+    },
+    "borders": {
+      "width": "1px",
+      "style": "solid",
+      "radius": "8px"
+    }
+  },
+  "interactivity": {
+    "hoverEffects": true,
+    "clickableStages": true,
+    "dragAndDrop": false,
+    "keyboardNavigation": true
+  },
+  "responsive": {
+    "mobile": {
+      "stageGap": "8px",
+      "contentPadding": "12px",
+      "fontSize": "14px"
+    },
+    "tablet": {
+      "stageGap": "10px",
+      "contentPadding": "14px",
+      "fontSize": "15px"
+    }
+  }
+}

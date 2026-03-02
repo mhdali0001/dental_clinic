@@ -1,0 +1,858 @@
+/* Dental Chart Styles */
+.dental-chart-container {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.dental-chart {
+    width: 100%;
+    height: auto;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    cursor: pointer;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Notation Selector Styles */
+.notation-selector {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.notation-selector label {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.notation-selector label:hover {
+    color: #3b82f6;
+}
+
+.notation-selector input[type="radio"]:checked + span {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.tooth-group {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.tooth-group:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3));
+}
+
+.tooth-group:hover .tooth {
+    stroke: #3b82f6 !important;
+    stroke-width: 2 !important;
+    filter: brightness(1.2) saturate(1.2);
+}
+
+.tooth-group:hover text {
+    fill: #1d4ed8 !important;
+    font-weight: bold;
+}
+
+.tooth {
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.tooth.selected {
+    stroke: #1d4ed8 !important;
+    stroke-width: 3 !important;
+    filter: brightness(1.3) saturate(1.3) drop-shadow(0 0 8px rgba(29, 78, 216, 0.5));
+}
+
+/* Enhanced tooth type specific styling */
+.tooth-group[data-tooth-type="incisor"] .tooth {
+    filter: drop-shadow(0 1px 2px rgba(59, 130, 246, 0.2));
+}
+
+.tooth-group[data-tooth-type="canine"] .tooth {
+    filter: drop-shadow(0 1px 2px rgba(16, 185, 129, 0.2));
+}
+
+.tooth-group[data-tooth-type="premolar"] .tooth {
+    filter: drop-shadow(0 1px 2px rgba(245, 158, 11, 0.2));
+}
+
+.tooth-group[data-tooth-type="molar"] .tooth {
+    filter: drop-shadow(0 1px 2px rgba(239, 68, 68, 0.2));
+}
+
+/* Animated selection effect */
+@keyframes toothSelect {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1.1); }
+}
+
+.tooth-group.selecting {
+    animation: toothSelect 0.3s ease;
+}
+
+/* Tooth status indicators */
+.tooth-healthy { fill: #4ade80; }
+.tooth-caries { fill: #ef4444; }
+.tooth-filling { fill: #3b82f6; }
+.tooth-crown { fill: #f59e0b; }
+.tooth-root-canal { fill: #8b5cf6; }
+.tooth-extraction { fill: #6b7280; }
+.tooth-implant { fill: #06b6d4; }
+.tooth-bridge { fill: #f97316; }
+.tooth-missing { fill: #dc2626; }
+
+/* Gradient overlays for different tooth statuses */
+.tooth-healthy { fill: url(#healthyGradient); }
+.tooth-caries { fill: url(#cariesGradient); }
+.tooth-filling { fill: url(#fillingGradient); }
+.tooth-crown { fill: url(#crownGradient); }
+.tooth-root-canal { fill: url(#rootCanalGradient); }
+
+#tooth-info {
+    position: fixed;
+    z-index: 1000;
+    display: none;
+    pointer-events: none;
+    max-width: 250px;
+    animation: fadeInTooltip 0.2s ease;
+}
+
+@keyframes fadeInTooltip {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced tooltip styling */
+#tooth-info .p-3 {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+}
+
+#tooth-info h4 {
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+#tooth-info .fas.fa-tooth {
+    text-shadow: 0 1px 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Treatment Selection Styles */
+.treatment-selection {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.treatment-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.treatment-type-card {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.treatment-type-card:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.treatment-type-card.selected {
+    border-color: #1d4ed8;
+    background: #dbeafe;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.treatment-type-card .icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    text-align: center;
+}
+
+.treatment-type-card .title {
+    font-weight: 600;
+    text-align: center;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.treatment-type-card .description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Treatment Details Styles */
+.treatment-details {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.treatment-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.treatment-option {
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.treatment-option:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.treatment-option.selected {
+    border-color: #1d4ed8;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.treatment-option input[type="checkbox"] {
+    margin-left: 0.5rem;
+}
+
+/* Treatment Stages Styles */
+.treatment-stages {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stages-header {
+    border-bottom: 2px solid #f3f4f6;
+    padding-bottom: 1rem;
+}
+
+.progress-bar {
+    background-color: #e5e7eb;
+    border-radius: 9999px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background-color: #3b82f6;
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
+
+.stage-item {
+    transition: all 0.3s ease;
+}
+
+.stage-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stage-icon {
+    font-size: 1.25rem;
+}
+
+.stage-details {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stage-notes,
+.stage-date {
+    transition: border-color 0.2s ease;
+}
+
+.stage-notes:focus,
+.stage-date:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Patient File Styles */
+.patient-file-container {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.patient-main-content {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.patient-sidebar {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+}
+
+.patient-tabs {
+    border-bottom: 2px solid #f3f4f6;
+    display: flex;
+    background: #f9fafb;
+}
+
+.patient-tab {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+    font-weight: 500;
+}
+
+.patient-tab:hover {
+    background: #f3f4f6;
+}
+
+.patient-tab.active {
+    border-bottom-color: #3b82f6;
+    background: #ffffff;
+    color: #3b82f6;
+}
+
+.tab-content {
+    padding: 2rem;
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Treatment History Styles */
+.treatment-history-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+
+.treatment-history-item:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.treatment-history-header {
+    display: flex;
+    justify-content: between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.treatment-date {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.treatment-type-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.treatment-teeth-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0.5rem 0;
+}
+
+.tooth-number {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Balance Display Styles */
+.balance-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.balance-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.balance-status {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.payment-history-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.payment-amount {
+    font-weight: 600;
+    color: #059669;
+}
+
+.payment-method {
+    font-size: 0.75rem;
+    background: #f3f4f6;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    color: #6b7280;
+}
+
+/* Medical History Styles */
+.medical-alert {
+    background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
+    border: 2px solid #fecaca;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.medical-alert-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.medical-alert-content {
+    color: #991b1b;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Notes Styles */
+.note-item {
+    background: #fffbeb;
+    border: 1px solid #fed7aa;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    color: #92400e;
+}
+
+.note-content {
+    color: #451a03;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Enhanced quadrant labeling */
+.quadrant-label {
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
+}
+
+/* Jaw outline styling */
+.jaw-outline {
+    stroke: #94a3b8;
+    stroke-width: 3;
+    fill: none;
+    filter: drop-shadow(0 2px 4px rgba(148, 163, 184, 0.3));
+}
+
+/* Legend enhancements */
+.treatment-legend {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.legend-item:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    padding: 0.25rem;
+    margin: 0.25rem -0.25rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .patient-file-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .patient-sidebar {
+        position: relative;
+        top: 0;
+    }
+    
+    .treatment-type-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .notation-selector {
+        flex-direction: column;
+    }
+    
+    .notation-selector .flex {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .notation-selector label {
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .patient-tabs {
+        flex-direction: column;
+    }
+    
+    .patient-tab {
+        text-align: right;
+    }
+    
+    .treatment-type-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .treatment-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .dental-chart {
+        min-height: 300px;
+    }
+    
+    .tooth-group:hover {
+        transform: scale(1.05);
+    }
+    
+    #tooth-info {
+        max-width: 200px;
+        font-size: 0.875rem;
+    }
+    
+    .notation-selector {
+        padding: 0.75rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .dental-chart-container,
+    .treatment-selection,
+    .treatment-details,
+    .treatment-stages,
+    .patient-file-container {
+        box-shadow: none;
+        border: 1px solid #d1d5db;
+    }
+    
+    .patient-tabs {
+        display: none;
+    }
+    
+    .tab-content {
+        display: block !important;
+        page-break-inside: avoid;
+    }
+    
+    .treatment-history-item,
+    .payment-history-item,
+    .note-item {
+        break-inside: avoid;
+    }
+    
+    .notation-selector {
+        display: none;
+    }
+    
+    .tooth-group {
+        filter: none !important;
+    }
+    
+    .dental-chart {
+        background: white !important;
+    }
+}
+
+/* Additional tooth hover and selection effects */
+.tooth-hover {
+    animation: toothPulse 1s infinite;
+}
+
+@keyframes toothPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Enhanced interactive feedback */
+.tooth-group:active {
+    transform: scale(0.95);
+}
+
+/* Accessibility improvements */
+.tooth-group:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Segment-based selection styles */
+.tooth-segment {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    stroke-width: 0.5;
+    stroke: #64748b;
+}
+
+.tooth-segment:hover {
+    filter: brightness(1.2);
+    stroke-width: 2;
+    stroke: #3b82f6;
+}
+
+.tooth-segment.selected {
+    stroke: #1d4ed8 !important;
+    stroke-width: 3 !important;
+    filter: brightness(1.3) saturate(1.3);
+    animation: segmentSelect 0.3s ease;
+}
+
+@keyframes segmentSelect {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Segment mode indicators */
+.segment-mode .tooth-group {
+    pointer-events: none;
+}
+
+.segment-mode .tooth-segment {
+    pointer-events: all;
+}
+
+.segment-mode .tooth-border {
+    opacity: 0.5;
+    stroke-dasharray: 2,2;
+}
+
+/* Selection mode toggle styles */
+.selection-mode-toggle {
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.selection-mode-toggle label {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.selection-mode-toggle input[type="radio"]:checked + span {
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Segment legend styles */
+.segment-legend {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.segment-legend .grid > div {
+    transition: all 0.2s ease;
+    padding: 0.25rem;
+    border-radius: 4px;
+}
+
+.segment-legend .grid > div:hover {
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Enhanced segment colors */
+.segment-buccal { fill: #e8f5e8; }
+.segment-mesial { fill: #e3f2fd; }
+.segment-lingual { fill: #fff3e0; }
+.segment-distal { fill: #f3e5f5; }
+
+/* Segment treatment status colors */
+.segment-healthy { fill: #4ade80; }
+.segment-caries { fill: #ef4444; }
+.segment-filling { fill: #3b82f6; }
+.segment-crown { fill: #f59e0b; }
+.segment-root-canal { fill: #8b5cf6; }
+
+/* Unique segment shape styling */
+.segment-curved-top {
+    filter: drop-shadow(0 -1px 2px rgba(34, 197, 94, 0.3));
+}
+
+.segment-curved-left {
+    filter: drop-shadow(-1px 0 2px rgba(59, 130, 246, 0.3));
+}
+
+.segment-rounded-bottom {
+    filter: drop-shadow(0 1px 2px rgba(251, 146, 60, 0.3));
+}
+
+.segment-angular-right {
+    filter: drop-shadow(1px 0 2px rgba(147, 51, 234, 0.3));
+}
+
+/* Segment labels */
+.segment-label {
+    font-family: 'Inter', -apple-system, sans-serif;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Enhanced segment hover effects for different shapes */
+.segment-curved-top:hover {
+    filter: brightness(1.3) drop-shadow(0 -2px 4px rgba(34, 197, 94, 0.5));
+}
+
+.segment-curved-left:hover {
+    filter: brightness(1.3) drop-shadow(-2px 0 4px rgba(59, 130, 246, 0.5));
+}
+
+.segment-rounded-bottom:hover {
+    filter: brightness(1.3) drop-shadow(0 2px 4px rgba(251, 146, 60, 0.5));
+}
+
+.segment-angular-right:hover {
+    filter: brightness(1.3) drop-shadow(2px 0 4px rgba(147, 51, 234, 0.5));
+}
