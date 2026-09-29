@@ -92,6 +92,12 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'save_progress') {
             if (!is_array($stages)) {
                 $treatment_stages_data = '[]';
             } else {
+                foreach ($stages as &$stage) {
+                    if (is_array($stage) && array_key_exists('completedDate', $stage)) {
+                        $stage['completedDate'] = normalizeStageDate($stage['completedDate']);
+                    }
+                }
+                unset($stage);
                 $treatment_stages_data = json_encode($stages, JSON_UNESCAPED_UNICODE);
             }
         }
@@ -161,6 +167,8 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
         $treatment_id = $_POST['treatment_id'];
         $completion_notes = $_POST['completion_notes'] ?? '';
         $treatment_stages_data = $_POST['treatment_stages'] ?? '[]';
+        // الطبيب أكّد إنهاء العلاج رغم وجود مراحل لم تُنفَّذ
+        $force_complete = !empty($_POST['force_complete']);
 
         // Check if all treatment stages are completed before allowing completion
         $can_complete = true;
@@ -172,14 +180,14 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
                 foreach ($stages as $index => $stage) {
                     if (!isset($stage['completed']) || !$stage['completed']) {
                         $can_complete = false;
-                        $incomplete_stages[] = $stage['title'] ?? "المرحلة " . ($index + 1);
+                        $incomplete_stages[] = htmlspecialchars($stage['title'] ?? $stage['title_ar'] ?? "المرحلة " . ($index + 1));
                     }
                 }
             }
         }
 
-        // If not all stages are completed, show error and stop
-        if (!$can_complete) {
+        // If not all stages are completed (and the doctor didn't confirm finishing anyway), show error and stop
+        if (!$can_complete && !$force_complete) {
             $error_message = "لا يمكن إكمال العلاج حتى يتم إكمال جميع مراحل العلاج التالية:<br>";
             $error_message .= "• " . implode("<br>• ", $incomplete_stages);
             throw new Exception($error_message);
@@ -193,15 +201,20 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
             if (is_array($stages)) {
                 $current_date = date('Y-m-d');
                 foreach ($stages as &$stage) {
-                    // Ensure all stages are marked as completed (they should be already)
-                    $stage['completed'] = true;
-                    if (empty($stage['completedDate'])) {
-                        $stage['completedDate'] = $current_date;
+                    // مراحل أُغلقت بإنهاء العلاج دون تنفيذها تُعلَّم كذلك
+                    if (empty($stage['completed'])) {
+                        $stage['skipped'] = true;
+                        if (empty($stage['notes'])) {
+                            $stage['notes'] = 'لم تُنفَّذ - أُغلقت عند إنهاء العلاج';
+                        }
                     }
+                    $stage['completed'] = true;
+                    $stage['completedDate'] = normalizeStageDate($stage['completedDate'] ?? null) ?? $current_date;
                     if (empty($stage['notes'])) {
                         $stage['notes'] = 'تم إكمال هذه المرحلة';
                     }
                 }
+                unset($stage);
                 $treatment_stages_data = json_encode($stages, JSON_UNESCAPED_UNICODE);
             } else {
                 // If JSON decode failed, set to empty array
@@ -278,13 +291,31 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
                 // تجاهل خطأ activity_log إذا لم يكن موجود
             }
 
+            // "إنهاء وبدء علاج جديد": الانتقال مباشرة لعلاج جديد لنفس المريض
+            if (($_POST['after_complete'] ?? '') === 'new_treatment') {
+                $stmt = $pdo->prepare("SELECT patient_id FROM treatments WHERE id = ? AND doctor_id = ?");
+                $stmt->execute([$treatment_id, $doctor_id]);
+                $completed_patient_id = $stmt->fetchColumn();
+                if ($completed_patient_id) {
+                    header("Location: treatment_new.php?patient_id=" . (int)$completed_patient_id . "&completed=1");
+                    exit;
+                }
+            }
+
             // إعادة توجيه إلى صفحة العلاجات
             header("Location: treatments.php?completed=1");
             exit;
         }
     } catch (PDOException $e) {
         $error_message = "خطأ في إكمال العلاج: " . $e->getMessage();
+    } catch (Exception $e) {
+        // رسالة المراحل غير المكتملة (مُهيّأة أعلاه)
+        $error_message = $e->getMessage();
     }
+}
+
+if (isset($_GET['completed']) && !$_POST) {
+    $success_message = "تم إنهاء العلاج السابق بنجاح، يمكنك الآن تسجيل العلاج الجديد";
 }
 
 // معالجة حفظ العلاج الجديد
@@ -537,14 +568,14 @@ try {
 
     if ($has_price_column) {
         $treatment_options_stmt = $pdo->query("
-            SELECT treatment_type_code, option_code, name_ar, description_ar, price
+            SELECT id, treatment_type_code, option_code, name_ar, description_ar, price
             FROM treatment_options
             WHERE is_active = TRUE
             ORDER BY treatment_type_code, display_order, name_ar
         ");
     } else {
         $treatment_options_stmt = $pdo->query("
-            SELECT treatment_type_code, option_code, name_ar, description_ar, 0.00 as price
+            SELECT id, treatment_type_code, option_code, name_ar, description_ar, 0.00 as price
             FROM treatment_options
             WHERE is_active = TRUE
             ORDER BY treatment_type_code, display_order, name_ar
@@ -985,6 +1016,7 @@ try {
             <input type="hidden" name="selected_option_code" id="selectedOptionCodeInput" value="">
             <?php if ($view_mode && $view_treatment): ?>
             <input type="hidden" name="treatment_id" value="<?= $view_treatment['id'] ?>">
+            <input type="hidden" name="force_complete" id="forceCompleteInput" value="">
             <?php endif; ?>
             
             <!-- Patient Selection -->
@@ -1352,6 +1384,11 @@ try {
                         <i class="fas fa-check ml-2"></i>
                         إكمال العلاج
                     </button>
+                    <button type="submit" id="completeAndNewButton" name="after_complete" value="new_treatment"
+                            class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 flex items-center justify-center text-lg">
+                        <i class="fas fa-forward ml-2"></i>
+                        إنهاء وبدء علاج جديد
+                    </button>
                     <button type="button" id="saveProgressButton"
                             class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 flex items-center justify-center text-lg"
                             onclick="saveProgress()">
@@ -1378,6 +1415,13 @@ try {
     <script>
         let dentalChart;
         let treatmentStagesManager;
+
+        // تاريخ اليوم بالتوقيت المحلي بصيغة Y-m-d (toISOString يعطي تاريخ UTC)
+        function todayISODate() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
         let selectedTreatmentType = '';
         
         // Treatment Stages Management Class with Configuration
@@ -1447,6 +1491,8 @@ try {
             }
             
             render() {
+                // الإعدادات تُحمَّل بشكل غير متزامن؛ init() يعيد الرسم بعد اكتمال تحميلها
+                if (!this.config) return;
                 const progressConfig = this.config.progressBarStyles;
                 const animationConfig = this.config.animations.progressBar;
                 
@@ -1506,8 +1552,8 @@ try {
                                 </div>
                             </div>
                             <div class="stage-actions">
-                                ${isCurrent ? `<button class="complete-stage-btn btn btn-sm bg-green-500 text-white px-3 py-1 rounded text-xs">إكمال</button>` : ''}
-                                ${isCompleted ? `<button class="edit-stage-btn btn btn-sm bg-gray-500 text-white px-3 py-1 rounded text-xs">تعديل</button>` : ''}
+                                ${isCurrent ? `<button type="button" class="complete-stage-btn btn btn-sm bg-green-500 text-white px-3 py-1 rounded text-xs">إكمال</button>` : ''}
+                                ${isCompleted ? `<button type="button" class="edit-stage-btn btn btn-sm bg-gray-500 text-white px-3 py-1 rounded text-xs">تعديل</button>` : ''}
                             </div>
                         </div>
                         ${isCurrent || isCompleted ? this.renderStageDetails(stage, index) : ''}
@@ -1547,9 +1593,9 @@ try {
                             <span class="text-sm text-gray-600">المرحلة ${this.currentStage + 1} من ${this.stages.length}</span>
                         </div>
                         <div class="stage-buttons space-x-2 space-x-reverse">
-                            <button class="prev-stage-btn btn bg-gray-500 text-white px-4 py-2 rounded text-sm" 
+                            <button type="button" class="prev-stage-btn btn bg-gray-500 text-white px-4 py-2 rounded text-sm" 
                                     ${this.currentStage === 0 ? 'disabled' : ''}>السابق</button>
-                            <button class="next-stage-btn btn bg-blue-500 text-white px-4 py-2 rounded text-sm"
+                            <button type="button" class="next-stage-btn btn bg-blue-500 text-white px-4 py-2 rounded text-sm"
                                     ${this.currentStage >= this.stages.length - 1 ? 'disabled' : ''}>التالي</button>
                         </div>
                     </div>
@@ -1590,7 +1636,7 @@ try {
             completeStage(stageIndex) {
                 if (stageIndex === this.currentStage || !this.stages[stageIndex].completed) {
                     this.stages[stageIndex].completed = true;
-                    this.stages[stageIndex].completedDate = new Date().toISOString().split('T')[0];
+                    this.stages[stageIndex].completedDate = todayISODate();
 
                     // Move to next stage only if not at the final stage
                     if (this.currentStage < this.stages.length - 1) {
@@ -1760,6 +1806,36 @@ try {
 
             // Load existing treatment data
             loadExistingTreatmentData();
+
+            // إنهاء العلاج: عند وجود مراحل لم تُنفَّذ يُطلب تأكيد الطبيب بدلاً من منعه
+            document.getElementById('treatmentForm').addEventListener('submit', function(e) {
+                if (this.querySelector('input[name="action"]').value !== 'complete_treatment') return;
+
+                updateTreatmentStagesInput();
+
+                const stages = (window.currentStages && window.currentStages.length)
+                    ? window.currentStages
+                    : (treatmentStagesManager?.stages || []);
+                const pendingStages = stages.filter(stage => !stage.completed);
+                const forceInput = document.getElementById('forceCompleteInput');
+
+                if (pendingStages.length > 0) {
+                    const names = pendingStages
+                        .map(stage => '• ' + (stage.title || stage.title_ar || 'مرحلة غير محددة'))
+                        .join('\n');
+                    const confirmed = confirm(
+                        'لم تكتمل المراحل التالية:\n' + names +
+                        '\n\nهل تريد إنهاء العلاج على أي حال؟\nستُسجَّل هذه المراحل على أنها "لم تُنفَّذ".'
+                    );
+                    if (!confirmed) {
+                        e.preventDefault();
+                        return;
+                    }
+                    if (forceInput) forceInput.value = '1';
+                } else if (forceInput) {
+                    forceInput.value = '';
+                }
+            });
 
             // Ensure UI elements are visible for completion mode
             setTimeout(() => {
@@ -2631,49 +2707,22 @@ try {
             console.log('عرض مراحل العلاج - optionId:', optionId);
             console.log('نوع العلاج:', treatmentType);
 
-            // تخزين نوع العلاج الحالي للاستخدام في البحث
-            const currentTreatmentType = treatmentType;
+            // مراحل الخيار المحدد فقط؛ لا نستعير مراحل خيار آخر من نفس النوع
+            const stages = (optionId && treatmentStages[optionId]) ? treatmentStages[optionId] : [];
 
-            // محاولة الحصول على المراحل بـ optionId
-            let stages = null;
-            if (optionId && treatmentStages[optionId]) {
-                stages = treatmentStages[optionId];
-                console.log('تم العثور على مراحل للخيار:', optionId, 'عدد المراحل:', stages.length);
-            } else {
-                console.log('لا توجد مراحل للخيار:', optionId);
+            if (stages.length === 0) {
+                // مسح أي مراحل معروضة لخيار سابق حتى لا تُحفظ مع هذا العلاج
+                window.currentStages = [];
+                updateTreatmentStagesInput();
 
-                // البحث في جميع المراحل المتاحة للعثور على مطابقة
-                console.log('البحث في جميع المراحل المتاحة...');
-                let foundStages = null;
-
-                // محاولة العثور على مراحل لأي خيار من نفس نوع العلاج
-                Object.keys(treatmentStages).forEach(key => {
-                    if (treatmentStages[key] && treatmentStages[key].length > 0) {
-                        const firstStage = treatmentStages[key][0];
-                        if (firstStage.treatment_type_code === currentTreatmentType) {
-                            foundStages = treatmentStages[key];
-                            console.log('تم العثور على مراحل لنوع العلاج:', currentTreatmentType);
-                            return;
-                        }
-                    }
-                });
-
-                if (foundStages) {
-                    stages = foundStages;
-                } else {
-                    console.log('لا توجد مراحل في قاعدة البيانات - عرض رسالة للمستخدم');
-                    document.getElementById('treatmentStages').innerHTML =
-                        '<div style="text-align: center; padding: 20px; color: #666;">' +
-                        '<p>لا توجد مراحل محددة لهذا النوع من العلاج</p>' +
-                        '<p>يرجى إضافة مراحل العلاج من إعدادات النظام</p>' +
-                        '</div>';
-                    return;
-                }
-            }
-
-            if (!stages || stages.length === 0) {
-                console.log('لا توجد مراحل للعرض');
-                document.getElementById('treatmentStages').innerHTML = '<p>لا توجد مراحل محددة لهذا العلاج</p>';
+                const option = (treatmentOptions[treatmentType] || []).find(opt => opt.option_code === optionCode);
+                document.getElementById('treatmentStages').innerHTML =
+                    '<div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-600">' +
+                    '<i class="fas fa-info-circle text-2xl text-gray-400 mb-2"></i>' +
+                    '<p class="font-semibold">لا توجد مراحل محددة لخيار «' + escapeHtml(option ? option.name_ar : optionCode) + '»</p>' +
+                    '<p class="text-sm mt-1">يمكنك حفظ العلاج بدون مراحل، أو إضافة مراحل لهذا الخيار من ' +
+                    '<a href="treatment_stages_management.php" class="text-blue-600 hover:underline">إدارة مراحل العلاج</a></p>' +
+                    '</div>';
                 return;
             }
 
@@ -2768,14 +2817,14 @@ try {
                             <!-- أزرار التحكم -->
                             <div style="display: flex; gap: 8px;">
                                 ${stage.current && !stage.completed ? `
-                                    <button onclick="completeStage(${index})"
+                                    <button type="button" onclick="completeStage(${index})"
                                             style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                         ✓ إكمال المرحلة
                                     </button>
                                 ` : ''}
 
                                 ${stage.completed ? `
-                                    <button onclick="uncompleteStage(${index})"
+                                    <button type="button" onclick="uncompleteStage(${index})"
                                             style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                         ↶ إلغاء الإكمال
                                     </button>
@@ -2786,11 +2835,13 @@ try {
                             </div>
                         </div>
 
-                        <!-- ملاحظات المرحلة -->
-                        ${stage.completed && stage.notes ? `
-                            <div style="margin-top: 10px; padding: 8px; background: white; border-radius: 4px; border-left: 3px solid #28a745;">
-                                <small style="color: #666; font-weight: bold;">ملاحظات:</small>
-                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">${stage.notes}</p>
+                        <!-- ملاحظات المرحلة (داخل المرحلة، اختيارية) -->
+                        ${stage.current || stage.completed ? `
+                            <div style="margin-top: 10px;">
+                                <label style="display: block; font-size: 12px; color: #666; font-weight: bold; margin-bottom: 4px;">ملاحظات المرحلة (اختياري)</label>
+                                <textarea rows="2" oninput="updateStageNotes(${index}, this.value)"
+                                          placeholder="أضف ملاحظة لهذه المرحلة..."
+                                          style="width: 100%; padding: 6px 8px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 4px; background: white; resize: vertical;">${escapeHtml(stage.notes || '')}</textarea>
                             </div>
                         ` : ''}
                     </div>
@@ -2806,6 +2857,17 @@ try {
             updateTreatmentStagesInput();
         }
 
+        function escapeHtml(text) {
+            return String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+
+        // حفظ ملاحظة المرحلة أثناء الكتابة (بدون إعادة رسم حتى لا يضيع مكان المؤشر)
+        function updateStageNotes(stageIndex, value) {
+            if (!window.currentStages || !window.currentStages[stageIndex]) return;
+            window.currentStages[stageIndex].notes = value;
+            updateTreatmentStagesInput();
+        }
+
         function completeStage(stageIndex) {
             if (!window.currentStages || !window.currentStages[stageIndex]) return;
 
@@ -2814,13 +2876,7 @@ try {
             // إكمال المرحلة الحالية
             stage.completed = true;
             stage.current = false;
-            stage.completedDate = new Date().toLocaleDateString('ar-EG');
-
-            // إضافة ملاحظة بسيطة
-            const notes = prompt('ملاحظات على هذه المرحلة (اختياري):');
-            if (notes) {
-                stage.notes = notes;
-            }
+            stage.completedDate = todayISODate();
 
             // تنشيط المرحلة التالية
             const nextStageIndex = stageIndex + 1;
@@ -2840,17 +2896,16 @@ try {
             const stage = window.currentStages[stageIndex];
 
             // إلغاء إكمال المرحلة
+            // الملاحظات المكتوبة تبقى محفوظة عند إلغاء الإكمال
             stage.completed = false;
             stage.current = true;
             stage.completedDate = null;
-            stage.notes = '';
 
             // إلغاء تنشيط المراحل التالية
             for (let i = stageIndex + 1; i < window.currentStages.length; i++) {
                 window.currentStages[i].current = false;
                 window.currentStages[i].completed = false;
                 window.currentStages[i].completedDate = null;
-                window.currentStages[i].notes = '';
             }
 
             console.log('تم إلغاء إكمال المرحلة:', stage.title_ar);
@@ -3113,7 +3168,7 @@ try {
                 return;
             }
 
-            const currentDate = new Date().toISOString().split('T')[0];
+            const currentDate = todayISODate();
 
             // Mark all stages as completed
             treatmentStagesManager.stages.forEach((stage, index) => {
@@ -3152,16 +3207,17 @@ try {
                 const incompleteStages = treatmentStagesManager.stages.filter(stage => !stage.completed);
                 const allStagesCompleted = incompleteStages.length === 0;
 
+                // الزر يبقى متاحاً دائماً؛ عند وجود مراحل متبقية يُطلب تأكيد الإنهاء عند الإرسال
+                completeButton.disabled = false;
+                completeButton.classList.remove('opacity-50', 'cursor-not-allowed');
                 if (allStagesCompleted) {
-                    completeButton.disabled = false;
-                    completeButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    completeButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
                     completeButton.classList.add('bg-green-500', 'hover:bg-green-600');
                     completeButton.innerHTML = '<i class="fas fa-check ml-2"></i>إكمال العلاج';
                 } else {
-                    completeButton.disabled = true;
-                    completeButton.classList.add('opacity-50', 'cursor-not-allowed');
                     completeButton.classList.remove('bg-green-500', 'hover:bg-green-600');
-                    completeButton.innerHTML = `<i class="fas fa-clock ml-2"></i>يجب إكمال ${incompleteStages.length} مرحلة`;
+                    completeButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                    completeButton.innerHTML = `<i class="fas fa-flag-checkered ml-2"></i>إنهاء العلاج (متبقٍ ${incompleteStages.length} مرحلة)`;
                 }
             }
         }

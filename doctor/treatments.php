@@ -603,19 +603,19 @@ $currentPage = 'treatments';
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-teal-500">
+            <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-green-500">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-600">علاجات مكتملة</p>
-                        <p class="text-3xl font-bold text-teal-600"><?= $completed_count ?></p>
+                        <p class="text-3xl font-bold text-green-600"><?= $completed_count ?></p>
                         <p class="text-xs text-gray-500 mt-1">إجمالي</p>
                     </div>
-                    <div class="bg-teal-100 p-3 rounded-full">
-                        <i class="fas fa-check-circle text-teal-600 text-xl"></i>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
                     </div>
                 </div>
                 <div class="mt-4">
-                    <a href="?filter=completed" class="text-teal-600 hover:text-teal-800 text-sm font-medium">
+                    <a href="?filter=completed" class="text-green-600 hover:text-green-800 text-sm font-medium">
                         عرض المكتملة <i class="fas fa-arrow-left mr-1"></i>
                     </a>
                 </div>
@@ -665,11 +665,11 @@ $currentPage = 'treatments';
                             متابعة
                         </a>
                         <a href="?filter=completed<?= $search ? '&search=' . urlencode($search) : '' ?>"
-                           class="<?= $filter === 'completed' ? 'bg-teal-500 text-white' : 'bg-gray-200 text-gray-700' ?> px-4 py-2 rounded-lg text-sm transition">
+                           class="<?= $filter === 'completed' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700' ?> px-4 py-2 rounded-lg text-sm transition">
                             مكتملة
                         </a>
                         <a href="?filter=in_progress<?= $search ? '&search=' . urlencode($search) : '' ?>"
-                           class="<?= $filter === 'in_progress' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700' ?> px-4 py-2 rounded-lg text-sm transition">
+                           class="<?= $filter === 'in_progress' ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-700' ?> px-4 py-2 rounded-lg text-sm transition">
                             جارية
                         </a>
                     </div>
@@ -1241,7 +1241,7 @@ $currentPage = 'treatments';
     
     <!-- زر علاج جديد للمريض -->
     <a href="treatment_new.php?patient_id=<?= $treatment['patient_id'] ?>"
-       class="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center">
+       class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center">
         <i class="fas fa-plus ml-1"></i>
         علاج جديد
     </a>
@@ -1249,7 +1249,7 @@ $currentPage = 'treatments';
     <!-- زر الدفع (إذا كان هناك مبلغ متبقي) -->
     <?php if ($treatment['cost'] > 0 && $remaining_balance > 0): ?>
         <a href="../nurse/patient_balance.php?action=add_payment&patient_id=<?= $treatment['patient_id'] ?>&treatment_id=<?= $treatment['id'] ?>" 
-           class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center">
+           class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center">
             <i class="fas fa-money-bill ml-1"></i>
             دفعة
         </a>

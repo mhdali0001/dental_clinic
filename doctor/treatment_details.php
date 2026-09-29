@@ -471,15 +471,19 @@ $currentPage = 'treatments';
                         <?php foreach ($treatment_stages as $index => $stage): ?>
                             <?php
                                 $is_completed = isset($stage['completed']) && $stage['completed'];
+                                // مرحلة أُغلقت عند إنهاء العلاج دون أن تُنفَّذ
+                                $is_skipped = $is_completed && !empty($stage['skipped']);
                                 $is_current = !$is_completed && ($index == 0 || (isset($treatment_stages[$index-1]['completed']) && $treatment_stages[$index-1]['completed']));
                                 $stage_class = $is_completed ? 'completed' : ($is_current ? 'in-progress' : '');
                             ?>
                             <div class="stage-item <?= $stage_class ?> mb-6 last:mb-0">
-                                <div class="bg-gray-50 rounded-lg p-4 <?= $is_completed ? 'bg-green-50 border border-green-200' : ($is_current ? 'bg-yellow-50 border border-yellow-200' : '') ?>">
+                                <div class="bg-gray-50 rounded-lg p-4 <?= $is_skipped ? 'border border-gray-300' : ($is_completed ? 'bg-green-50 border border-green-200' : ($is_current ? 'bg-yellow-50 border border-yellow-200' : '')) ?>">
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h4 class="font-semibold text-gray-800 mb-2">
-                                                <?php if ($is_completed): ?>
+                                                <?php if ($is_skipped): ?>
+                                                    <i class="fas fa-minus-circle text-gray-500 ml-2"></i>
+                                                <?php elseif ($is_completed): ?>
                                                     <i class="fas fa-check-circle text-green-600 ml-2"></i>
                                                 <?php elseif ($is_current): ?>
                                                     <i class="fas fa-clock text-yellow-600 ml-2"></i>
@@ -497,10 +501,11 @@ $currentPage = 'treatments';
                                                     المدة المتوقعة: <?= htmlspecialchars($stage['duration']) ?>
                                                 </p>
                                             <?php endif; ?>
-                                            <?php if ($is_completed && !empty($stage['completedDate'])): ?>
+                                            <?php $stage_completed_date = normalizeStageDate($stage['completedDate'] ?? null); ?>
+                                            <?php if ($is_completed && !$is_skipped && $stage_completed_date): ?>
                                                 <p class="text-xs text-green-600">
                                                     <i class="fas fa-calendar-check ml-1"></i>
-                                                    تم الإكمال: <?= date('d/m/Y', strtotime($stage['completedDate'])) ?>
+                                                    تم الإكمال: <?= date('d/m/Y', strtotime($stage_completed_date)) ?>
                                                 </p>
                                             <?php endif; ?>
                                             <?php if (!empty($stage['notes'])): ?>
@@ -511,7 +516,11 @@ $currentPage = 'treatments';
                                             <?php endif; ?>
                                         </div>
                                         <div class="text-left">
-                                            <?php if ($is_completed): ?>
+                                            <?php if ($is_skipped): ?>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                                                    لم تُنفَّذ
+                                                </span>
+                                            <?php elseif ($is_completed): ?>
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                     مكتمل
                                                 </span>
