@@ -200,7 +200,7 @@ try {
             <div class="stat-card bg-white rounded-lg shadow-lg p-6 border-r-4 border-purple-500">
                 <div class="flex items-center">
                     <div class="bg-purple-100 p-3 rounded-full">
-                        <i class="fas fa-medical-kit text-purple-600 text-2xl"></i>
+                        <i class="fas fa-tooth text-purple-600 text-2xl"></i>
                     </div>
                     <div class="mr-4 flex-1">
                         <p class="text-sm font-medium text-gray-600">إجمالي العلاجات</p>

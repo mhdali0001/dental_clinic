@@ -210,7 +210,12 @@ try {
     </style>
 </head>
 <body class="bg-gray-50">
-    <?php include 'includes/admin_header.php'; ?>
+    <?php
+    $pageTitle = 'التقارير';
+    $pageIcon = 'fas fa-file-alt';
+    $pageSubtitle = 'تقارير العيادة والأداء';
+    include 'includes/admin_header.php';
+    ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Page Header -->

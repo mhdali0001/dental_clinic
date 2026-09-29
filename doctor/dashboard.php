@@ -204,540 +204,368 @@ $currentPage = 'dashboard';
     <title><?= $pageTitle ?> - عيادة الأسنان</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .hover-scale:hover { transform: scale(1.02); transition: transform 0.2s; }
-        .medical-alert { background: linear-gradient(45deg, #fee2e2, #fef2f2); }
-        .treatment-card { transition: all 0.3s ease; }
-        .treatment-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .analytics-topbar { transition: all 0.3s ease; }
-        .analytics-topbar:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
-        .analytics-metric { transition: color 0.2s ease; }
-        .analytics-metric:hover { transform: scale(1.1); }
-    </style>
 </head>
 <body class="bg-gray-50">
     <?php include 'includes/doctor_header.php'; ?>
 
-    <!-- Dashboard-specific Analytics Bar -->
-    <div class="bg-blue-50 border-b-2 border-blue-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div class="flex items-center justify-between">
-                <div class="text-sm text-gray-600">
-                    <i class="fas fa-calendar-day ml-1"></i>
-                    <?= date('d/m/Y - l', strtotime($today)) ?>
-                </div>
+    <?php
+    $arabicMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    ?>
 
-                <div class="flex items-center space-x-6 space-x-reverse">
-                    <div class="text-center">
-                        <div class="text-blue-600 font-bold text-lg"><?= $todayAppointments ?></div>
-                        <div class="text-gray-600 text-xs">مواعيد اليوم</div>
-                    </div>
-                    <div class="w-px h-8 bg-blue-200"></div>
-                    <div class="text-center">
-                        <div class="text-green-600 font-bold text-lg"><?= $treatmentsThisWeek ?></div>
-                        <div class="text-gray-600 text-xs">علاجات الأسبوع</div>
-                    </div>
-                    <div class="w-px h-8 bg-blue-200"></div>
-                    <div class="text-center">
-                        <div class="text-purple-600 font-bold text-lg"><?= number_format((float)($monthlyRevenue ?? 0), 0) ?></div>
-                        <div class="text-gray-600 text-xs">إيرادات الشهر</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <?php if (isset($error)): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
                 <i class="fas fa-exclamation-triangle ml-1"></i>
                 <?= $error ?>
             </div>
         <?php endif; ?>
 
-        <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 fade-in">
-            <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-blue-500 hover-scale">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">مواعيد اليوم</p>
-                        <p class="text-3xl font-bold text-blue-600"><?= $todayAppointments ?></p>
-                        <p class="text-xs text-gray-500 mt-1"><?= date('d/m/Y') ?></p>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <i class="fas fa-calendar-day text-blue-600 text-xl"></i>
-                    </div>
+        <!-- Statistics -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 fade-in">
+            <div class="edsm-card edsm-stat edsm-tone-blue">
+                <div>
+                    <div class="edsm-stat-label">مواعيد اليوم</div>
+                    <div class="edsm-stat-value"><?= (int)$todayAppointments ?></div>
+                    <div class="edsm-stat-note">إجمالي مواعيد اليوم</div>
                 </div>
+                <div class="edsm-stat-icon"><i class="fas fa-calendar-check"></i></div>
             </div>
-
-            <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-green-500 hover-scale">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">علاجات هذا الأسبوع</p>
-                        <p class="text-3xl font-bold text-green-600"><?= $treatmentsThisWeek ?></p>
-                        <p class="text-xs text-gray-500 mt-1">مكتملة</p>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <i class="fas fa-tooth text-green-600 text-xl"></i>
-                    </div>
+            <div class="edsm-card edsm-stat edsm-tone-teal">
+                <div>
+                    <div class="edsm-stat-label">علاجات هذا الأسبوع</div>
+                    <div class="edsm-stat-value"><?= (int)$treatmentsThisWeek ?></div>
+                    <div class="edsm-stat-note">منذ بداية الأسبوع</div>
                 </div>
+                <div class="edsm-stat-icon"><i class="fas fa-tooth"></i></div>
             </div>
-
-            <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-yellow-500 hover-scale">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">يحتاجون متابعة</p>
-                        <p class="text-3xl font-bold text-yellow-600"><?= $followupNeeded ?></p>
-                        <p class="text-xs text-gray-500 mt-1">هذا الأسبوع</p>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <i class="fas fa-user-clock text-yellow-600 text-xl"></i>
-                    </div>
+            <div class="edsm-card edsm-stat edsm-tone-amber">
+                <div>
+                    <div class="edsm-stat-label">يحتاجون متابعة</div>
+                    <div class="edsm-stat-value"><?= (int)$followupNeeded ?></div>
+                    <div class="edsm-stat-note">خلال 7 أيام</div>
                 </div>
+                <div class="edsm-stat-icon"><i class="fas fa-user-clock"></i></div>
             </div>
-
-            <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-purple-500 hover-scale">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">إجمالي المرضى</p>
-                        <p class="text-3xl font-bold text-purple-600"><?= $totalPatientsTreated ?></p>
-                        <p class="text-xs text-gray-500 mt-1">معالجين</p>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-full">
-                        <i class="fas fa-users text-purple-600 text-xl"></i>
-                    </div>
+            <div class="edsm-card edsm-stat edsm-tone-violet">
+                <div>
+                    <div class="edsm-stat-label">مرضى عالجتهم</div>
+                    <div class="edsm-stat-value"><?= (int)$totalPatientsTreated ?></div>
+                    <div class="edsm-stat-note">إجمالي المرضى</div>
                 </div>
+                <div class="edsm-stat-icon"><i class="fas fa-users"></i></div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-<div class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
-    <h3 class="text-xl font-bold text-gray-800 mb-6">
-        <i class="fas fa-bolt text-yellow-500 ml-2"></i>
-        إجراءات سريعة
-    </h3>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <a href="treatment_new.php" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-plus-square text-2xl mb-2"></i>
-            <div class="font-semibold">إضافة علاج جديد</div>
-        </a>
-
-        <!-- ميزات السكرتاريا المتاحة للطبيب -->
-        <a href="../nurse/patients.php?action=add" class="bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-user-plus text-2xl mb-2"></i>
-            <div class="font-semibold">إضافة مريض جديد</div>
-        </a>
-
-        <a href="../nurse/appointments.php?action=add" class="bg-blue-700 hover:bg-blue-800 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-calendar-plus text-2xl mb-2"></i>
-            <div class="font-semibold">حجز موعد</div>
-        </a>
-
-        <a href="../nurse/patient_balance.php" class="bg-green-700 hover:bg-green-800 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-cash-register text-2xl mb-2"></i>
-            <div class="font-semibold">تسجيل دفعة</div>
-        </a>
-
-        <a href="appointments.php" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-calendar-check text-2xl mb-2"></i>
-            <div class="font-semibold">جدول المواعيد</div>
-        </a>
-        
-        <a href="follow_ups.php" class="bg-yellow-500 hover:bg-yellow-600 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-user-clock text-2xl mb-2"></i>
-            <div class="font-semibold">إدارة المتابعات</div>
-        </a>
-        
-        <a href="treatments.php?filter=recent" class="bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-history text-2xl mb-2"></i>
-            <div class="font-semibold">العلاجات الأخيرة</div>
-        </a>
-        
-        <a href="reports.php" class="bg-indigo-500 hover:bg-indigo-600 text-white p-4 rounded-lg text-center transition hover-scale">
-            <i class="fas fa-chart-bar text-2xl mb-2"></i>
-            <div class="font-semibold">التقارير الطبية</div>
-        </a>
-    </div>
-</div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-<!-- Today's Appointments - محدث -->
-<div class="bg-white rounded-lg shadow-lg p-6 fade-in">
-    <div class="flex justify-between items-center mb-6">
-        <h3 class="text-xl font-bold text-gray-800">
-            <i class="fas fa-calendar-day text-blue-500 ml-2"></i>
-            مواعيد اليوم
-        </h3>
-        <a href="appointments.php" class="text-blue-600 hover:text-blue-800 text-sm">
-            عرض الكل <i class="fas fa-arrow-left mr-1"></i>
-        </a>
-    </div>
-    
-    <div class="space-y-4 max-h-96 overflow-y-auto">
-        <?php if (empty($todayAppointmentsList)): ?>
-            <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-calendar-day text-4xl mb-4 opacity-50"></i>
-                <p>لا توجد مواعيد اليوم</p>
-                <a href="treatment_new.php" class="mt-3 inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition">
-                    إضافة علاج جديد
-                </a>
+        <div class="edsm-card fade-in">
+            <div class="edsm-card-head">
+                <h3 class="edsm-card-title"><i class="fas fa-bolt"></i> إجراءات سريعة</h3>
             </div>
-        <?php else: ?>
-            <?php foreach ($todayAppointmentsList as $appointment): ?>
-                <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                    <div class="flex items-center">
-                        <div class="bg-blue-100 p-2 rounded-full ml-3">
-                            <i class="fas fa-user text-blue-600"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium"><?= htmlspecialchars($appointment['patient_name']) ?></p>
-                            <p class="text-sm text-gray-600">
-                                <?php
-                                $time = '';
-                                if (!empty($appointment['appointment_time'])) {
-                                    $time = date('H:i', strtotime($appointment['appointment_time']));
-                                } elseif (!empty($appointment['appointment_date'])) {
-                                    $time = date('H:i', strtotime($appointment['appointment_date']));
-                                }
-                                echo $time;
-                                ?>
-                                <?php if (!empty($appointment['treatment_type'])): ?>
-                                    - <?= htmlspecialchars($appointment['treatment_type']) ?>
-                                <?php endif; ?>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex space-x-2 space-x-reverse">
-                        <?php if (!$appointment['treatment_id']): ?>
-                            <a href="treatment_new.php?appointment_id=<?= $appointment['id'] ?>&patient_id=<?= $appointment['patient_id'] ?>" 
-                               class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition">
-                                <i class="fas fa-plus ml-1"></i>علاج
-                            </a>
-                        <?php else: ?>
-                            <a href="treatment_details.php?id=<?= $appointment['treatment_id'] ?>" 
-                               class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition">
-                                <i class="fas fa-eye ml-1"></i>عرض
-                            </a>
-                        <?php endif; ?>
-                        <a href="patient_profile.php?id=<?= $appointment['patient_id'] ?>" 
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition">
-                            <i class="fas fa-user-circle ml-1"></i>
-                        </a>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-</div>
-
-<!-- Waiting List Section -->
-<div class="bg-white rounded-lg shadow-lg p-6 fade-in">
-    <div class="flex justify-between items-center mb-6">
-        <h3 class="text-xl font-bold text-gray-800">
-            <i class="fas fa-hourglass-half text-orange-500 ml-2"></i>
-            قائمة الانتظار
-        </h3>
-        <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-            <?= count($waitingList) ?> مريض
-        </span>
-    </div>
-
-    <div class="space-y-4 max-h-96 overflow-y-auto">
-        <?php if (empty($waitingList)): ?>
-            <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-user-clock text-4xl mb-4 opacity-50"></i>
-                <p>لا يوجد مرضى في قائمة الانتظار</p>
+            <div class="edsm-quick-grid">
+                <a href="treatment_new.php" class="edsm-quick edsm-grad-teal"><i class="fas fa-plus-square"></i><span>إضافة علاج جديد</span></a>
+                <!-- ميزات السكرتاريا المتاحة للطبيب -->
+                <a href="../nurse/patients.php?action=add" class="edsm-quick edsm-grad-pink"><i class="fas fa-user-plus"></i><span>إضافة مريض جديد</span></a>
+                <a href="../nurse/appointments.php?action=add" class="edsm-quick edsm-grad-blue"><i class="fas fa-calendar-plus"></i><span>حجز موعد</span></a>
+                <a href="../nurse/patient_balance.php" class="edsm-quick edsm-grad-green"><i class="fas fa-wallet"></i><span>تسجيل دفعة</span></a>
+                <a href="appointments.php" class="edsm-quick edsm-grad-sky"><i class="fas fa-calendar-check"></i><span>جدول المواعيد</span></a>
+                <a href="follow_ups.php" class="edsm-quick edsm-grad-amber"><i class="fas fa-user-clock"></i><span>إدارة المتابعات</span></a>
+                <a href="treatments.php?filter=recent" class="edsm-quick edsm-grad-violet"><i class="fas fa-history"></i><span>العلاجات الأخيرة</span></a>
+                <a href="reports.php" class="edsm-quick edsm-grad-indigo"><i class="fas fa-file-medical-alt"></i><span>التقارير الطبية</span></a>
             </div>
-        <?php else: ?>
-            <?php foreach ($waitingList as $patient): ?>
-                <div class="flex items-center justify-between p-4 border rounded-lg <?= $patient['priority'] === 'emergency' ? 'border-red-300 bg-red-50' : ($patient['priority'] === 'urgent' ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200') ?>">
-                    <div class="flex items-center">
-                        <div class="<?= $patient['priority'] === 'emergency' ? 'bg-red-500' : ($patient['priority'] === 'urgent' ? 'bg-yellow-500' : 'bg-gray-500') ?> p-2 rounded-full ml-3">
-                            <i class="fas fa-user text-white"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-center">
-                                <p class="font-medium"><?= htmlspecialchars($patient['patient_name']) ?></p>
-                                <?php if ($patient['priority'] === 'emergency'): ?>
-                                    <span class="bg-red-500 text-white text-xs px-2 py-1 rounded ml-2">طارئ</span>
-                                <?php elseif ($patient['priority'] === 'urgent'): ?>
-                                    <span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded ml-2">عاجل</span>
-                                <?php endif; ?>
-                            </div>
-                            <p class="text-sm text-gray-600">
-                                الهاتف: <?= htmlspecialchars($patient['phone'] ?? 'غير محدد') ?>
-                            </p>
-                            <p class="text-xs text-gray-500">
-                                وقت الوصول: <?= $patient['arrival_time'] ? date('H:i', strtotime($patient['arrival_time'])) : 'غير محدد' ?>
-                                <?php if (!empty($patient['reason'])): ?>
-                                    - <?= htmlspecialchars($patient['reason']) ?>
-                                <?php endif; ?>
-                            </p>
-                            <?php if (!empty($patient['medical_history'])): ?>
-                                <p class="text-xs text-red-600 mt-1">
-                                    <i class="fas fa-exclamation-triangle ml-1"></i>
-                                    تاريخ مرضي: <?= htmlspecialchars($patient['medical_history']) ?>
-                                </p>
-                            <?php endif; ?>
-                            <?php if (!empty($patient['allergies'])): ?>
-                                <p class="text-xs text-red-600">
-                                    <i class="fas fa-allergies ml-1"></i>
-                                    حساسية: <?= htmlspecialchars($patient['allergies']) ?>
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div class="flex space-x-2 space-x-reverse">
-                        <a href="treatment_new.php?patient_id=<?= $patient['patient_id'] ?>&from_waiting=1"
-                           class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm transition">
-                            <i class="fas fa-plus ml-1"></i>بدء العلاج
-                        </a>
-                        <a href="patient_profile.php?id=<?= $patient['patient_id'] ?>"
-                           class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm transition">
-                            <i class="fas fa-user-circle ml-1"></i>الملف
-                        </a>
-                        <?php if (isset($patient['id'])): ?>
-                            <button onclick="removeFromWaitingList(<?= $patient['id'] ?>)"
-                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm transition">
-                                <i class="fas fa-times ml-1"></i>إزالة
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-</div>
         </div>
 
-        <!-- Follow-ups Management Widget -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-            <!-- Follow-up Statistics -->
-            <div class="bg-white rounded-lg shadow-lg p-6 fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-calendar-check text-green-500 ml-2"></i>
-                        إحصائيات المتابعة
-                    </h3>
-                    <a href="follow_ups.php" class="text-green-600 hover:text-green-800 text-sm">
-                        إدارة المتابعات <i class="fas fa-arrow-left mr-1"></i>
-                    </a>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Today's Appointments -->
+            <div class="edsm-card edsm-watermark fade-in">
+                <div class="edsm-card-head">
+                    <h3 class="edsm-card-title"><i class="fas fa-calendar-day"></i> مواعيد اليوم</h3>
+                    <a href="appointments.php" class="edsm-link">عرض الكل <i class="fas fa-chevron-left text-xs"></i></a>
                 </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-red-600"><?= $followUpStats['overdue'] ?></div>
-                        <div class="text-sm text-red-700">متأخرة</div>
+                <?php if (empty($todayAppointmentsList)): ?>
+                    <div class="edsm-empty">
+                        <div class="edsm-empty-icon"><i class="far fa-calendar-alt"></i></div>
+                        <p>لا توجد مواعيد لليوم</p>
+                        <a href="../nurse/appointments.php?action=add" class="edsm-btn edsm-btn-lg"><i class="fas fa-plus"></i> إنشاء موعد جديد</a>
                     </div>
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-green-600"><?= $followUpStats['today'] ?></div>
-                        <div class="text-sm text-green-700">اليوم</div>
-                    </div>
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-blue-600"><?= $followUpStats['upcoming'] ?></div>
-                        <div class="text-sm text-blue-700">الأسبوع القادم</div>
-                    </div>
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-gray-600"><?= $followUpStats['total_pending'] ?></div>
-                        <div class="text-sm text-gray-700">المجموع</div>
-                    </div>
-                </div>
-
-                <div class="flex space-x-3 space-x-reverse">
-                    <a href="follow_ups.php?filter=today"
-                       class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-center text-sm transition">
-                        <i class="fas fa-calendar-day ml-1"></i>متابعات اليوم
-                    </a>
-                    <a href="follow_ups.php?filter=overdue"
-                       class="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-center text-sm transition">
-                        <i class="fas fa-exclamation-triangle ml-1"></i>المتأخرة
-                    </a>
-                </div>
-            </div>
-
-            <!-- Upcoming Follow-ups -->
-            <div class="bg-white rounded-lg shadow-lg p-6 fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-clock text-blue-500 ml-2"></i>
-                        المتابعات القادمة
-                    </h3>
-                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                        <?= count($upcomingFollowUps) ?> متابعة
-                    </span>
-                </div>
-
-                <div class="space-y-3 max-h-80 overflow-y-auto">
-                    <?php if (empty($upcomingFollowUps)): ?>
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-calendar-check text-4xl mb-4 opacity-50"></i>
-                            <p>لا توجد متابعات مجدولة</p>
-                            <a href="follow_ups.php?action=add" class="mt-3 inline-block bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm transition">
-                                إضافة متابعة جديدة
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <?php foreach ($upcomingFollowUps as $followup): ?>
-                            <div class="flex items-center justify-between p-3 border rounded-lg
-                                        <?= $followup['priority'] === 'urgent' ? 'border-red-200 bg-red-50' :
-                                           ($followup['priority'] === 'high' ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200') ?>">
-                                <div class="flex items-center">
-                                    <div class="<?= $followup['priority'] === 'urgent' ? 'bg-red-500' :
-                                                   ($followup['priority'] === 'high' ? 'bg-yellow-500' : 'bg-blue-500') ?> p-2 rounded-full ml-3">
-                                        <i class="fas fa-<?= $followup['follow_up_type'] === 'birthday' ? 'birthday-cake' :
-                                                          ($followup['follow_up_type'] === 'treatment' ? 'tooth' : 'user-clock') ?> text-white text-sm"></i>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center">
-                                            <p class="font-medium text-sm"><?= htmlspecialchars($followup['patient_name']) ?></p>
-                                            <?php if ($followup['priority'] === 'urgent'): ?>
-                                                <span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2">عاجل</span>
-                                            <?php elseif ($followup['priority'] === 'high'): ?>
-                                                <span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded mr-2">مهم</span>
+                <?php else: ?>
+                    <div class="edsm-list">
+                        <?php foreach ($todayAppointmentsList as $appointment): ?>
+                            <?php
+                            $time = '';
+                            if (!empty($appointment['appointment_time'])) {
+                                $time = date('H:i', strtotime($appointment['appointment_time']));
+                            } elseif (!empty($appointment['appointment_date'])) {
+                                $time = date('H:i', strtotime($appointment['appointment_date']));
+                            }
+                            ?>
+                            <div class="edsm-row">
+                                <div class="edsm-row-main">
+                                    <div class="edsm-avatar-soft"><i class="fas fa-user"></i></div>
+                                    <div class="min-w-0">
+                                        <div class="edsm-row-title"><?= htmlspecialchars($appointment['patient_name']) ?></div>
+                                        <div class="edsm-row-meta">
+                                            <span class="edsm-num"><?= $time ?></span>
+                                            <?php if (!empty($appointment['treatment_type'])): ?>
+                                                · <?= htmlspecialchars($appointment['treatment_type']) ?>
                                             <?php endif; ?>
                                         </div>
-                                        <p class="text-xs text-gray-600">
-                                            <?= date('d/m/Y', strtotime($followup['follow_up_date'])) ?>
-                                            <?php if ($followup['follow_up_date'] === date('Y-m-d')): ?>
-                                                <span class="text-green-600 font-medium">- اليوم</span>
-                                            <?php elseif ($followup['follow_up_date'] === date('Y-m-d', strtotime('+1 day'))): ?>
-                                                <span class="text-blue-600 font-medium">- غداً</span>
-                                            <?php endif; ?>
-                                        </p>
-                                        <p class="text-xs text-gray-500">
-                                            <?= htmlspecialchars($followup['follow_up_reason'] ?? 'متابعة عامة') ?>
-                                        </p>
                                     </div>
                                 </div>
-                                <div class="flex space-x-2 space-x-reverse">
-                                    <a href="follow_ups.php?action=complete&id=<?= $followup['id'] ?>"
-                                       class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition">
-                                        <i class="fas fa-check ml-1"></i>إكمال
-                                    </a>
-                                    <a href="patient_profile.php?id=<?= $followup['patient_id'] ?>"
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition">
-                                        <i class="fas fa-user ml-1"></i>الملف
+                                <div class="edsm-row-actions">
+                                    <?php if (!$appointment['treatment_id']): ?>
+                                        <a href="treatment_new.php?appointment_id=<?= $appointment['id'] ?>&patient_id=<?= $appointment['patient_id'] ?>" class="edsm-btn edsm-btn-teal">
+                                            <i class="fas fa-plus"></i> علاج
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="treatment_details.php?id=<?= $appointment['treatment_id'] ?>" class="edsm-btn">
+                                            <i class="fas fa-eye"></i> عرض
+                                        </a>
+                                    <?php endif; ?>
+                                    <a href="patient_profile.php?id=<?= $appointment['patient_id'] ?>" class="edsm-btn edsm-btn-ghost" title="ملف المريض">
+                                        <i class="fas fa-user-circle"></i>
                                     </a>
                                 </div>
                             </div>
                         <?php endforeach; ?>
-                    <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Waiting List -->
+            <div class="edsm-card fade-in">
+                <div class="edsm-card-head">
+                    <h3 class="edsm-card-title"><i class="fas fa-hourglass-half"></i> قائمة الانتظار</h3>
+                    <span class="edsm-chip"><span class="edsm-num"><?= count($waitingList) ?></span> مريض</span>
                 </div>
+                <?php if (empty($waitingList)): ?>
+                    <div class="edsm-empty">
+                        <div class="edsm-empty-icon"><i class="fas fa-users"></i></div>
+                        <p>لا يوجد مرضى في قائمة الانتظار</p>
+                    </div>
+                <?php else: ?>
+                    <div class="edsm-list">
+                        <?php foreach ($waitingList as $patient): ?>
+                            <div class="edsm-row <?= $patient['priority'] === 'emergency' ? 'is-danger' : ($patient['priority'] === 'urgent' ? 'is-warning' : '') ?>">
+                                <div class="edsm-row-main">
+                                    <div class="edsm-avatar-soft"><i class="fas fa-user"></i></div>
+                                    <div class="min-w-0">
+                                        <div class="edsm-row-title flex items-center gap-2">
+                                            <?= htmlspecialchars($patient['patient_name']) ?>
+                                            <?php if ($patient['priority'] === 'emergency'): ?>
+                                                <span class="edsm-tag edsm-tag-danger">طارئ</span>
+                                            <?php elseif ($patient['priority'] === 'urgent'): ?>
+                                                <span class="edsm-tag edsm-tag-warning">عاجل</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="edsm-row-meta">
+                                            <i class="fas fa-phone-alt text-xs ml-1"></i><span class="edsm-num"><?= htmlspecialchars($patient['phone'] ?? 'غير محدد') ?></span>
+                                            · وصل: <span class="edsm-num"><?= $patient['arrival_time'] ? date('H:i', strtotime($patient['arrival_time'])) : 'غير محدد' ?></span>
+                                            <?php if (!empty($patient['reason'])): ?>
+                                                · <?= htmlspecialchars($patient['reason']) ?>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if (!empty($patient['medical_history'])): ?>
+                                            <div class="text-xs text-red-600 mt-1">
+                                                <i class="fas fa-exclamation-triangle ml-1"></i>تاريخ مرضي: <?= htmlspecialchars($patient['medical_history']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($patient['allergies'])): ?>
+                                            <div class="text-xs text-red-600">
+                                                <i class="fas fa-allergies ml-1"></i>حساسية: <?= htmlspecialchars($patient['allergies']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="edsm-row-actions">
+                                    <a href="treatment_new.php?patient_id=<?= $patient['patient_id'] ?>&from_waiting=1" class="edsm-btn edsm-btn-teal">
+                                        <i class="fas fa-play"></i> بدء العلاج
+                                    </a>
+                                    <a href="patient_profile.php?id=<?= $patient['patient_id'] ?>" class="edsm-btn edsm-btn-ghost" title="ملف المريض">
+                                        <i class="fas fa-user-circle"></i>
+                                    </a>
+                                    <?php if (isset($patient['id'])): ?>
+                                        <button type="button" onclick="removeFromWaitingList(<?= $patient['id'] ?>)" class="edsm-btn edsm-btn-danger" title="إزالة من القائمة">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
-        <!-- Monthly Revenue Summary -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mt-8 fade-in">
-            <div class="flex justify-between items-center">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Follow-up Statistics -->
+            <div class="edsm-card fade-in">
+                <div class="edsm-card-head">
+                    <h3 class="edsm-card-title"><i class="fas fa-chart-bar"></i> إحصائيات المتابعة</h3>
+                    <a href="follow_ups.php" class="edsm-link">إدارة المتابعات <i class="fas fa-chevron-left text-xs"></i></a>
+                </div>
+                <div class="edsm-mini-grid mb-4">
+                    <a href="follow_ups.php?filter=overdue" class="edsm-mini edsm-mini-danger">
+                        <div><strong><?= (int)$followUpStats['overdue'] ?></strong><small>متأخرة</small></div>
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </a>
+                    <a href="follow_ups.php?filter=today" class="edsm-mini edsm-mini-teal">
+                        <div><strong><?= (int)$followUpStats['today'] ?></strong><small>اليوم</small></div>
+                        <i class="far fa-calendar-check"></i>
+                    </a>
+                    <div class="edsm-mini edsm-mini-blue">
+                        <div><strong><?= (int)$followUpStats['upcoming'] ?></strong><small>الأسبوع القادم</small></div>
+                        <i class="far fa-clock"></i>
+                    </div>
+                    <div class="edsm-mini edsm-mini-gray">
+                        <div><strong><?= (int)$followUpStats['total_pending'] ?></strong><small>المجموع</small></div>
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <a href="follow_ups.php?filter=today" class="edsm-btn edsm-btn-teal edsm-btn-lg"><i class="fas fa-calendar-day"></i> متابعات اليوم</a>
+                    <a href="follow_ups.php?filter=overdue" class="edsm-btn edsm-btn-danger edsm-btn-lg"><i class="fas fa-exclamation-triangle"></i> المتأخرة</a>
+                </div>
+            </div>
+
+            <!-- Upcoming Follow-ups -->
+            <div class="edsm-card edsm-watermark fade-in">
+                <div class="edsm-card-head">
+                    <h3 class="edsm-card-title"><i class="far fa-clock"></i> المتابعات القادمة</h3>
+                    <span class="edsm-chip"><span class="edsm-num"><?= count($upcomingFollowUps) ?></span> متابعة</span>
+                </div>
+                <?php if (empty($upcomingFollowUps)): ?>
+                    <div class="edsm-empty">
+                        <div class="edsm-empty-icon"><i class="far fa-calendar-plus"></i></div>
+                        <p>لا توجد متابعات مجدولة</p>
+                        <a href="follow_ups.php?action=add" class="edsm-btn edsm-btn-teal edsm-btn-lg"><i class="fas fa-plus"></i> إضافة متابعة جديدة</a>
+                    </div>
+                <?php else: ?>
+                    <div class="edsm-list">
+                        <?php foreach ($upcomingFollowUps as $followup): ?>
+                            <div class="edsm-row <?= $followup['priority'] === 'urgent' ? 'is-danger' : ($followup['priority'] === 'high' ? 'is-warning' : '') ?>">
+                                <div class="edsm-row-main">
+                                    <div class="edsm-avatar-soft">
+                                        <i class="fas fa-<?= $followup['follow_up_type'] === 'birthday' ? 'birthday-cake' : ($followup['follow_up_type'] === 'treatment' ? 'tooth' : 'user-clock') ?>"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="edsm-row-title flex items-center gap-2">
+                                            <?= htmlspecialchars($followup['patient_name']) ?>
+                                            <?php if ($followup['priority'] === 'urgent'): ?>
+                                                <span class="edsm-tag edsm-tag-danger">عاجل</span>
+                                            <?php elseif ($followup['priority'] === 'high'): ?>
+                                                <span class="edsm-tag edsm-tag-warning">مهم</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="edsm-row-meta">
+                                            <span class="edsm-num"><?= date('d/m/Y', strtotime($followup['follow_up_date'])) ?></span>
+                                            <?php if ($followup['follow_up_date'] === date('Y-m-d')): ?>
+                                                <span class="edsm-tag edsm-tag-success">اليوم</span>
+                                            <?php elseif ($followup['follow_up_date'] === date('Y-m-d', strtotime('+1 day'))): ?>
+                                                <span class="edsm-tag edsm-tag-success">غداً</span>
+                                            <?php endif; ?>
+                                            · <?= htmlspecialchars($followup['follow_up_reason'] ?? 'متابعة عامة') ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="edsm-row-actions">
+                                    <!-- إكمال المتابعة مباشرة (نفس إجراء صفحة المتابعات) -->
+                                    <form method="POST" action="follow_ups.php">
+                                        <input type="hidden" name="action" value="complete_followup">
+                                        <input type="hidden" name="followup_id" value="<?= (int)$followup['id'] ?>">
+                                        <button type="submit" class="edsm-btn edsm-btn-teal"><i class="fas fa-check"></i> إكمال</button>
+                                    </form>
+                                    <a href="patient_profile.php?id=<?= $followup['patient_id'] ?>" class="edsm-btn edsm-btn-ghost" title="ملف المريض">
+                                        <i class="fas fa-user-circle"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Monthly Revenue + Recent Treatments -->
+        <div class="edsm-card fade-in">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-chart-line text-green-500 ml-2"></i>
-                        الإيرادات الشهرية
-                    </h3>
-                    <p class="text-gray-600">شهر <?= date('m/Y') ?></p>
+                    <h3 class="edsm-card-title"><i class="fas fa-chart-line"></i> الإيرادات الشهرية</h3>
+                    <p class="text-sm text-gray-500 mt-1"><?= $arabicMonths[(int)date('n')] . ' ' . date('Y') ?></p>
                 </div>
-                <div class="text-right">
-                    <div class="text-3xl font-bold text-green-600">
-                        <?= number_format((float)($monthlyRevenue ?? 0), 2) ?> ليرة سورية
+                <div class="flex items-center gap-3">
+                    <img src="../assets/img/edsm-icon.png" alt="" class="w-12 h-auto">
+                    <div>
+                        <div class="text-2xl font-extrabold text-gray-800">
+                            <span class="edsm-num"><?= number_format((float)($monthlyRevenue ?? 0), 2) ?></span> ليرة سورية
+                        </div>
+                        <div class="text-sm text-gray-500">إجمالي تكلفة علاجاتك هذا الشهر</div>
                     </div>
-                    <p class="text-sm text-gray-500">إجمالي العلاجات</p>
                 </div>
             </div>
-            
-            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a href="treatments.php?filter=unpaid" class="bg-red-50 border border-red-200 rounded-lg p-4 hover:bg-red-100 transition">
-                    <div class="text-center">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl mb-2"></i>
-                        <div class="font-semibold text-red-800">العلاجات غير المدفوعة</div>
-                        <div class="text-sm text-red-600">تحتاج متابعة</div>
-                    </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <a href="treatments.php?filter=unpaid" class="edsm-tile edsm-tile-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>العلاجات غير المدفوعة</strong>
+                    <small>تحتاج متابعة</small>
                 </a>
-                
-                <a href="patients.php?filter=followup" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 hover:bg-yellow-100 transition">
-                    <div class="text-center">
-                        <i class="fas fa-user-clock text-yellow-600 text-2xl mb-2"></i>
-                        <div class="font-semibold text-yellow-800">مواعيد المتابعة</div>
-                        <div class="text-sm text-yellow-600">مجدولة قريباً</div>
-                    </div>
+                <a href="patients.php?filter=followup" class="edsm-tile edsm-tile-amber">
+                    <i class="fas fa-user-clock"></i>
+                    <strong>مواعيد المتابعة</strong>
+                    <small>مجدولة للمتابعة</small>
                 </a>
-                
-                <a href="reports.php" class="bg-blue-50 border border-blue-200 rounded-lg p-4 hover:bg-blue-100 transition">
-                    <div class="text-center">
-                        <i class="fas fa-chart-bar text-blue-600 text-2xl mb-2"></i>
-                        <div class="font-semibold text-blue-800">التقارير التفصيلية</div>
-                        <div class="text-sm text-blue-600">إحصائيات شاملة</div>
-                    </div>
+                <a href="reports.php" class="edsm-tile edsm-tile-blue">
+                    <i class="fas fa-chart-bar"></i>
+                    <strong>التقارير التفصيلية</strong>
+                    <small>إحصائيات شاملة</small>
                 </a>
             </div>
+
+            <div class="edsm-card-head" style="margin-bottom: 10px;">
+                <h3 class="edsm-card-title"><i class="fas fa-history"></i> آخر العلاجات</h3>
+                <a href="treatments.php" class="edsm-link">عرض الكل <i class="fas fa-chevron-left text-xs"></i></a>
+            </div>
+            <?php if (empty($recentTreatments)): ?>
+                <div class="edsm-empty">
+                    <div class="edsm-empty-icon"><i class="fas fa-file-medical"></i></div>
+                    <p>لا توجد علاجات مسجلة حديثاً</p>
+                    <a href="treatment_new.php" class="edsm-btn edsm-btn-teal edsm-btn-lg"><i class="fas fa-plus"></i> إضافة أول علاج</a>
+                </div>
+            <?php else: ?>
+                <div class="divide-y divide-gray-100">
+                    <?php foreach ($recentTreatments as $treatment): ?>
+                        <div class="flex items-center justify-between gap-3 py-3">
+                            <div class="edsm-row-main">
+                                <div class="edsm-avatar-soft"><i class="fas fa-tooth"></i></div>
+                                <div class="min-w-0">
+                                    <div class="edsm-row-title"><?= htmlspecialchars($treatment['patient_name']) ?></div>
+                                    <div class="edsm-row-meta">
+                                        <?= htmlspecialchars($treatment['treatment_details'] ?: ($treatment['treatment_type'] ?? 'غير محدد')) ?>
+                                        <?php
+                                        $treatmentDate = $treatment['treatment_date'] ?? $treatment['created_at'] ?? '';
+                                        if ($treatmentDate) {
+                                            echo ' · <span class="edsm-num">' . date('d/m/Y', strtotime($treatmentDate)) . '</span>';
+                                        }
+                                        $cost = $treatment['cost'] ?? 0;
+                                        if ($cost > 0) {
+                                            echo ' · <span class="edsm-num">' . number_format($cost, 2) . '</span> ليرة سورية';
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="edsm-row-actions">
+                                <a href="treatment_details.php?id=<?= $treatment['id'] ?>" class="edsm-btn"><i class="fas fa-eye"></i> عرض</a>
+                                <a href="patient_profile.php?id=<?= $treatment['patient_id'] ?>" class="edsm-btn edsm-btn-ghost" title="ملف المريض">
+                                    <i class="fas fa-user-circle"></i>
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
-
-        
-<!-- Recent Treatments - محدث -->
-<div class="bg-white rounded-lg shadow-lg p-6 fade-in">
-    <div class="flex justify-between items-center mb-6">
-        <h3 class="text-xl font-bold text-gray-800">
-            <i class="fas fa-history text-purple-500 ml-2"></i>
-            آخر العلاجات
-        </h3>
-        <a href="treatments.php" class="text-purple-600 hover:text-purple-800 text-sm">
-            عرض الكل <i class="fas fa-arrow-left mr-1"></i>
-        </a>
     </div>
-    
-    <div class="space-y-4 max-h-96 overflow-y-auto">
-        <?php if (empty($recentTreatments)): ?>
-            <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-file-medical text-4xl mb-4 opacity-50"></i>
-                <p>لا توجد علاجات مسجلة حديثاً</p>
-                <a href="treatment_new.php" class="mt-3 inline-block bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition">
-                    إضافة أول علاج
-                </a>
-            </div>
-        <?php else: ?>
-            <?php foreach ($recentTreatments as $treatment): ?>
-                <div class="flex items-center justify-between py-3 border-b last:border-b-0">
-                    <div class="flex items-center">
-                        <div class="bg-purple-100 p-2 rounded-full ml-3">
-                            <i class="fas fa-tooth text-purple-600"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium"><?= htmlspecialchars($treatment['patient_name']) ?></p>
-                            <p class="text-sm text-gray-600"><?= htmlspecialchars($treatment['treatment_type'] ?? 'غير محدد') ?></p>
-                            <p class="text-xs text-gray-500">
-                                <?php
-                                $treatmentDate = $treatment['treatment_date'] ?? $treatment['created_at'] ?? '';
-                                if ($treatmentDate) {
-                                    echo date('d/m/Y', strtotime($treatmentDate));
-                                }
-                                $cost = $treatment['cost'] ?? 0;
-                                if ($cost > 0) {
-                                    echo ' - ' . number_format($cost, 2) . ' ليرة سورية';
-                                }
-                                ?>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex space-x-2 space-x-reverse">
-                        <a href="treatment_details.php?id=<?= $treatment['id'] ?>" 
-                           class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition">
-                            <i class="fas fa-eye ml-1"></i>عرض
-                        </a>
-                        <a href="patient_profile.php?id=<?= $treatment['patient_id'] ?>" 
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition">
-                            <i class="fas fa-user-circle ml-1"></i>
-                        </a>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-</div>
-    </div>
-
     <!-- Auto-refresh script -->
     <script>
         // تحديث الصفحة كل 10 دقائق
@@ -745,23 +573,21 @@ $currentPage = 'dashboard';
             location.reload();
         }, 600000);
         
+        // تنبيهات لوحة التحكم تُعرض في زاوية واحدة فوق بعضها
+        function dashboardToast(html, tone, ms) {
+            let box = document.querySelector('.edsm-toasts');
+            if (!box) { box = document.createElement('div'); box.className = 'edsm-toasts'; document.body.appendChild(box); }
+            const toast = document.createElement('div');
+            toast.className = 'edsm-toast edsm-toast-' + tone;
+            toast.innerHTML = html;
+            box.appendChild(toast);
+            setTimeout(() => toast.remove(), ms);
+        }
+
         // إظهار تنبيه للحالات الطارئة في قائمة الانتظار
         const emergencyPatients = <?= count(array_filter($waitingList, fn($p) => $p['priority'] === 'emergency')) ?>;
         if (emergencyPatients > 0) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 left-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
-            notification.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-exclamation-triangle ml-2"></i>
-                    <span>يوجد ${emergencyPatients} حالة طارئة في قائمة الانتظار!</span>
-                </div>
-            `;
-            document.body.appendChild(notification);
-            
-            // إخفاء التنبيه بعد 5 ثوان
-            setTimeout(() => {
-                notification.remove();
-            }, 5000);
+            dashboardToast(`<i class="fas fa-exclamation-triangle"></i><span>يوجد ${emergencyPatients} حالة طارئة في قائمة الانتظار!</span>`, 'danger', 5000);
         }
         
         // تمييز العلاجات التي تحتاج متابعة
@@ -775,37 +601,11 @@ $currentPage = 'dashboard';
         const todayFollowUps = <?= $followUpStats['today'] ?>;
 
         if (overdueFollowUps > 0) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-20 left-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
-            notification.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-exclamation-triangle ml-2"></i>
-                    <span>يوجد ${overdueFollowUps} متابعة متأخرة!</span>
-                    <a href="follow_ups.php?filter=overdue" class="bg-red-700 hover:bg-red-800 px-3 py-1 rounded text-sm mr-3">عرض</a>
-                </div>
-            `;
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.remove();
-            }, 8000);
+            dashboardToast(`<i class="fas fa-exclamation-triangle"></i><span>يوجد ${overdueFollowUps} متابعة متأخرة!</span><a href="follow_ups.php?filter=overdue">عرض</a>`, 'danger', 8000);
         }
 
         if (todayFollowUps > 0) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
-            notification.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-calendar-check ml-2"></i>
-                    <span>يوجد ${todayFollowUps} متابعة اليوم</span>
-                    <a href="follow_ups.php?filter=today" class="bg-green-700 hover:bg-green-800 px-3 py-1 rounded text-sm mr-3">عرض</a>
-                </div>
-            `;
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.remove();
-            }, 6000);
+            dashboardToast(`<i class="fas fa-calendar-check"></i><span>يوجد ${todayFollowUps} متابعة اليوم</span><a href="follow_ups.php?filter=today">عرض</a>`, 'teal', 6000);
         }
 
         // إزالة مريض من قائمة الانتظار

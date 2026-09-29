@@ -279,7 +279,12 @@ $chart_data = [
     </style>
 </head>
 <body class="bg-gray-50">
-    <?php include 'includes/admin_header.php'; ?>
+    <?php
+    $pageTitle = 'إحصائيات المرضى';
+    $pageIcon = 'fas fa-users';
+    $pageSubtitle = 'تحليل بيانات المرضى';
+    include 'includes/admin_header.php';
+    ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Page Header -->

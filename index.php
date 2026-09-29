@@ -22,335 +22,244 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة عيادة الأسنان</title>
+    <title>EDSM - نظام إدارة عيادة الأسنان</title>
+    <link rel="icon" type="image/png" href="assets/img/favicon.png">
+    <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            font-family: 'Noto Kufi Arabic', sans-serif;
+        /* تصميم صفحة الدخول: design/Login Page.png — ألوان الهوية: design/Visual Identity.png */
+        :root {
+            --edsm-blue: #0B5ED7;
+            --edsm-navy: #0A3D7A;
+            --edsm-navy-deep: #0A2A5E;
+            --edsm-teal: #14B8A6;
+            --edsm-text: #1F2937;
+            --edsm-muted: #64748B;
         }
-        
-        h1, h2 {
-            font-family: 'Amiri', serif;
-        }
-        
-        body {
-            background-color: #f8f9fa;
-            background-image: 
-                linear-gradient(90deg, #e9ecef 1px, transparent 1px),
-                linear-gradient(180deg, #e9ecef 1px, transparent 1px);
-            background-size: 25px 25px;
-            position: relative;
-        }
-        
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at center, transparent 0%, rgba(248, 249, 250, 0.8) 100%);
-            pointer-events: none;
-        }
-        
-        .classic-card {
-            background: white;
-            border: 1px solid #dee2e6;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.02),
-                0 4px 8px rgba(0,0,0,0.03),
-                0 8px 16px rgba(0,0,0,0.04),
-                0 16px 32px rgba(0,0,0,0.05);
-            position: relative;
-        }
-        
-        .classic-card::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, #dee2e6, #f8f9fa, #dee2e6);
-            z-index: -1;
-            opacity: 0.5;
-        }
-        
-        .header-pattern {
-            background-color: #1e3a5f;
-            background-image: 
-                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.05) 10px, rgba(255,255,255,.05) 20px),
-                repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,255,255,.03) 10px, rgba(255,255,255,.03) 20px);
+        * { font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; }
+        .latin { font-family: 'Montserrat', 'Tajawal', sans-serif; }
+        body { background: #F5F9FE; color: var(--edsm-text); }
+
+        /* wordmark */
+        .wordmark { font-family: 'Montserrat', sans-serif; font-weight: 800; direction: ltr; line-height: 1; letter-spacing: 1px; color: var(--edsm-navy); }
+        .wordmark span { color: var(--edsm-teal); }
+        .wordmark-sub { font-family: 'Montserrat', sans-serif; direction: ltr; color: var(--edsm-navy); font-weight: 500; }
+
+        /* ---------- art panel (left) ---------- */
+        .art {
             position: relative;
             overflow: hidden;
+            background: linear-gradient(180deg, #F7FBFF 0%, #EFF6FD 45%, #E7F1FB 100%);
         }
-        
-        .header-pattern::after {
+        .art-photo {
+            position: absolute;
+            inset-inline: 0;
+            bottom: 0;
+            height: 64%;
+            background: url('assets/img/login-clinic.jpg') center bottom / cover no-repeat;
+        }
+        .art-photo::before { /* blend the photo into the light top area */
             content: '';
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #c9a961, #f4e4c1, #c9a961);
+            inset: 0;
+            background: linear-gradient(180deg, #F0F7FE 0%, rgba(240, 247, 254, 0.55) 22%, rgba(240, 247, 254, 0) 45%);
         }
-        
-        .classic-input {
-            border: 1px solid #ced4da;
-            background-color: #fff;
-            transition: all 0.2s ease;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-        }
-        
-        .classic-input:focus {
-            border-color: #1e3a5f;
-            background-color: #fafbfc;
-            box-shadow: 
-                inset 0 1px 2px rgba(0,0,0,0.05),
-                0 0 0 3px rgba(30, 58, 95, 0.05);
-            outline: none;
-        }
-        
-        .classic-button {
-            background: linear-gradient(180deg, #2c5282 0%, #1e3a5f 100%);
-            border: 1px solid #1a2f4e;
-            color: white;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            transition: all 0.2s ease;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.1);
-        }
-        
-        .classic-button:hover {
-            background: linear-gradient(180deg, #1e3a5f 0%, #152941 100%);
-            transform: translateY(-1px);
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.1);
-        }
-        
-        .classic-button:active {
-            transform: translateY(0);
-            box-shadow: 
-                0 1px 2px rgba(0,0,0,0.1),
-                inset 0 1px 2px rgba(0,0,0,0.1);
-        }
-        
-        .logo-badge {
-            background: white;
-            border: 3px solid #c9a961;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #dee2e6, transparent);
-            margin: 1.5rem 0;
-        }
-        
-        .info-box {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border: 1px solid #dee2e6;
-            border-right: 3px solid #c9a961;
-        }
-        
-        .error-box {
-            background-color: #fff5f5;
-            border: 1px solid #feb2b2;
-            border-right: 3px solid #fc8181;
-        }
-        
-        .success-box {
-            background-color: #f0fdf4;
-            border: 1px solid #86efac;
-            border-right: 3px solid #22c55e;
-        }
-        
-        .label-text {
-            color: #495057;
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { 
-                opacity: 0; 
-                transform: translateY(10px);
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0);
-            }
-        }
-        
-        .tooth-icon-classic {
-            fill: #1e3a5f;
-        }
-        
-        .decorative-line {
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, #c9a961, #f4e4c1);
-            margin: 0 auto;
-        }
-        
-        .input-icon {
+        .art-wave { position: absolute; inset-inline: 0; bottom: 0; width: 100%; height: 34%; }
+        .art-features {
             position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
+            inset-inline: 0;
+            bottom: 34px;
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            color: #fff;
+            z-index: 2;
+        }
+        .art-feature { display: flex; align-items: center; gap: 12px; padding: 0 28px; font-size: 14.5px; line-height: 1.35; }
+        .art-feature + .art-feature { border-inline-start: 1px solid rgba(255, 255, 255, 0.35); }
+        .art-feature i { font-size: 26px; opacity: 0.95; }
+        .tagline { color: var(--edsm-blue); }
+        .tagline-bar { width: 70px; height: 4px; border-radius: 4px; background: var(--edsm-teal); }
+        .brand-rule { flex: 1; height: 1px; background: #94A3B8; opacity: 0.6; }
+
+        /* ---------- form side (right) ---------- */
+        .form-side { position: relative; overflow: hidden; }
+        .form-side::before { /* large faint tooth, top corner */
+            content: '';
+            position: absolute;
+            top: -40px;
+            inset-inline-start: -60px;
+            width: 320px;
+            height: 300px;
+            background: url('assets/img/edsm-icon.png') no-repeat center / contain;
+            opacity: 0.05;
             pointer-events: none;
         }
-        
-        .input-with-icon {
-            padding-left: 40px;
+        .login-card {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(11, 94, 215, 0.10), 0 2px 8px rgba(15, 23, 42, 0.04);
+            border: 1px solid #E6EEF8;
         }
+        .field {
+            border: 1.5px solid #DCE6F2;
+            background: #fff;
+            border-radius: 12px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .field:focus { outline: none; border-color: var(--edsm-blue); box-shadow: 0 0 0 4px rgba(11, 94, 215, 0.12); }
+        .field-icon { position: absolute; inset-inline-start: 16px; top: 50%; transform: translateY(-50%); color: #64748B; pointer-events: none; font-size: 17px; }
+        .btn-brand {
+            background: linear-gradient(to left, var(--edsm-teal), var(--edsm-blue));
+            border-radius: 12px;
+            box-shadow: 0 12px 24px rgba(11, 94, 215, 0.22);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .btn-brand:hover { transform: translateY(-1px); box-shadow: 0 16px 30px rgba(11, 94, 215, 0.3); filter: brightness(1.05); }
+        .btn-brand:active { transform: none; }
+        .demo summary { list-style: none; cursor: pointer; }
+        .demo summary::-webkit-details-marker { display: none; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center py-12 px-4">
-    <div class="container mx-auto max-w-md relative z-10">
-        <!-- Logo and Title Section -->
-        <div class="text-center mb-8 fade-in">
-            <div class="logo-badge w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg class="w-14 h-14 tooth-icon-classic" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                </svg>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">عيادة الأسنان المتطورة</h1>
-            <div class="decorative-line mb-2"></div>
-            <p class="text-gray-600 text-sm mt-2">نظام إدارة العيادة الطبية</p>
-        </div>
-        
-        <!-- Main Login Card -->
-        <div class="classic-card rounded-lg overflow-hidden fade-in">
-            <!-- Card Header -->
-            <div class="header-pattern px-8 py-6">
-                <h2 class="text-2xl font-bold text-white text-center">تسجيل الدخول</h2>
-                <p class="text-gray-200 text-sm text-center mt-1">أدخل بياناتك للوصول إلى النظام</p>
-            </div>
-            
-            <!-- Card Body -->
-            <div class="p-8">
+<body class="min-h-screen">
+    <div class="min-h-screen grid md:grid-cols-2">
+        <!-- Form side (right in RTL) -->
+        <main class="form-side flex flex-col items-center justify-center px-5 py-10 md:px-10">
+            <div class="login-card w-full max-w-md p-8 sm:p-12 fade-in relative">
+                <!-- Logo -->
+                <div class="flex items-center justify-center gap-3 mb-8" dir="ltr">
+                    <img src="assets/img/edsm-icon.png" alt="" class="w-16 h-auto">
+                    <div>
+                        <div class="wordmark text-4xl">EDS<span>M</span></div>
+                        <div class="wordmark-sub text-[10px] mt-1">Dental Clinic Management System</div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-8">
+                    <h1 class="text-2xl font-extrabold text-gray-800 flex items-center justify-center gap-3">
+                        مرحباً بعودتك
+                        <i class="far fa-hand text-[#0B5ED7] text-2xl"></i>
+                    </h1>
+                    <p class="text-gray-500 mt-2">قم بتسجيل الدخول للمتابعة</p>
+                </div>
+
                 <?php if (isset($_SESSION['error'])): ?>
-                    <div class="error-box px-4 py-3 rounded mb-6 fade-in">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-red-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-red-700 text-sm"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></span>
-                        </div>
+                    <div class="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-5">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                        <span><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></span>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (isset($_SESSION['success'])): ?>
-                    <div class="success-box px-4 py-3 rounded mb-6 fade-in">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 ml-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-green-700 text-sm"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></span>
-                        </div>
+                    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-xl mb-5">
+                        <i class="fas fa-check-circle text-emerald-500"></i>
+                        <span><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></span>
                     </div>
                 <?php endif; ?>
-                
-                <form action="auth/login.php" method="POST" class="space-y-5">
-                    <!-- Username Field -->
-                    <div>
-                        <label class="label-text">
-                            اسم المستخدم
-                        </label>
-                        <div class="relative">
-                            <span class="input-icon">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                                </svg>
-                            </span>
-                            <input type="text" name="username" required
-                                   class="classic-input input-with-icon w-full py-3 rounded text-gray-700"
-                                   placeholder="أدخل اسم المستخدم">
-                        </div>
+
+                <form action="auth/login.php" method="POST" class="space-y-4">
+                    <div class="relative">
+                        <label for="username" class="sr-only">اسم المستخدم</label>
+                        <i class="far fa-user field-icon"></i>
+                        <input type="text" id="username" name="username" required autocomplete="username" autofocus
+                               class="field w-full py-3.5 ps-12 pe-4 text-gray-800" placeholder="اسم المستخدم">
                     </div>
-                    
-                    <!-- Password Field -->
-                    <div>
-                        <label class="label-text">
-                            كلمة المرور
-                        </label>
-                        <div class="relative">
-                            <span class="input-icon">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
-                                </svg>
-                            </span>
-                            <input type="password" name="password" required
-                                   class="classic-input input-with-icon w-full py-3 rounded text-gray-700"
-                                   placeholder="أدخل كلمة المرور">
-                        </div>
+
+                    <div class="relative">
+                        <label for="password" class="sr-only">كلمة المرور</label>
+                        <i class="fas fa-lock field-icon"></i>
+                        <input type="password" id="password" name="password" required autocomplete="current-password"
+                               class="field w-full py-3.5 ps-12 pe-4 text-gray-800" placeholder="كلمة المرور">
                     </div>
-                    
-                    <!-- Hidden Role Field - Will be determined from database -->
-                    <!-- تم إزالة حقل اختيار نوع المستخدم لأنه سيتم جلبه من قاعدة البيانات -->
-                    
-                    <div class="divider"></div>
-                    
-                    <!-- Submit Button -->
-                    <button type="submit" 
-                            class="classic-button w-full py-3 px-4 rounded text-white">
-                        <svg class="w-5 h-5 inline-block ml-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        دخول إلى النظام
+
+                    <!-- نوع الحساب يُحدَّد تلقائياً من قاعدة البيانات -->
+                    <button type="submit" class="btn-brand w-full py-3.5 px-4 text-white font-bold text-lg flex items-center justify-center gap-3 !mt-6">
+                        <i class="fas fa-arrow-right"></i>
+                        تسجيل الدخول
                     </button>
                 </form>
-                
-                <!-- Demo Credentials -->
-                <div class="mt-6">
-                    <div class="info-box p-4 rounded">
-                        <h3 class="text-xs font-semibold text-gray-700 mb-3 flex items-center">
-                            <svg class="w-4 h-4 ml-2 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                            </svg>
-                            بيانات الدخول التجريبية
-                        </h3>
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-600 font-medium">حساب الطبيب:</span>
-                                <code class="bg-white px-2 py-1 rounded text-gray-800" dir="ltr">doctor1 / password</code>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-600 font-medium">حساب الممرضة:</span>
-                                <code class="bg-white px-2 py-1 rounded text-gray-800" dir="ltr">nurse1 / password</code>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-600 font-medium">حساب الإدارة:</span>
-                                <code class="bg-white px-2 py-1 rounded text-gray-800" dir="ltr">admin / password</code>
-                            </div>
+
+                <!-- Demo Credentials (مطويّة) -->
+                <details class="demo mt-6 text-xs">
+                    <summary class="text-center text-[#0B5ED7] font-semibold hover:underline">
+                        <i class="fas fa-info-circle ml-1"></i>بيانات الدخول التجريبية
+                    </summary>
+                    <div class="mt-3 bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 font-medium">حساب الطبيب:</span>
+                            <code class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-gray-800" dir="ltr">doctor1 / password</code>
                         </div>
-                        <div class="mt-3 pt-3 border-t border-gray-200">
-                            <p class="text-xs text-gray-500 text-center">
-                                سيتم تحديد نوع الحساب تلقائياً من قاعدة البيانات
-                            </p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 font-medium">حساب الممرضة:</span>
+                            <code class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-gray-800" dir="ltr">nurse1 / password</code>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 font-medium">حساب الإدارة:</span>
+                            <code class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-gray-800" dir="ltr">admin / password</code>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <footer class="text-center text-xs text-gray-400 mt-8 leading-6">
+                <div class="latin" dir="ltr">© <?= date('Y') ?> EDSM - Dental Clinic Management System</div>
+                <div>جميع الحقوق محفوظة</div>
+            </footer>
+        </main>
+
+        <!-- Art panel (left in RTL) -->
+        <aside class="art hidden md:block min-h-screen" aria-hidden="true">
+            <div class="art-photo"></div>
+            <svg class="art-wave" viewBox="0 0 800 280" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="waveNavy" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#0B5ED7"/>
+                        <stop offset="1" stop-color="#0A2A5E"/>
+                    </linearGradient>
+                    <linearGradient id="waveTeal" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0" stop-color="#14B8A6" stop-opacity="0.9"/>
+                        <stop offset="1" stop-color="#5EEAD4" stop-opacity="0.55"/>
+                    </linearGradient>
+                </defs>
+                <path d="M0,70 C170,20 330,150 520,120 C650,100 730,130 800,150 L800,280 L0,280 Z" fill="#0B5ED7" opacity="0.35"/>
+                <path d="M0,110 C190,60 340,190 540,160 C660,142 740,168 800,185 L800,280 L0,280 Z" fill="url(#waveTeal)"/>
+                <path d="M0,140 C200,95 350,215 560,190 C670,178 745,196 800,210 L800,280 L0,280 Z" fill="url(#waveNavy)"/>
+            </svg>
+
+            <div class="relative z-10 px-12 pt-16 lg:pt-24">
+                <!-- Logo -->
+                <div class="flex items-center justify-center gap-4" dir="ltr">
+                    <img src="assets/img/edsm-icon.png" alt="" class="w-28 lg:w-32 h-auto">
+                    <div>
+                        <div class="wordmark text-6xl lg:text-7xl">EDS<span>M</span></div>
+                        <div class="wordmark-sub text-base lg:text-lg mt-2">Dental Clinic Management System</div>
+                        <div class="flex items-center gap-3 mt-1" dir="rtl">
+                            <span class="brand-rule"></span>
+                            <span class="text-gray-500 text-base">برنامج إدارة عيادة الأسنان</span>
+                            <span class="brand-rule"></span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Tagline -->
+                <div class="mt-12 lg:mt-16 max-w-md mx-auto">
+                    <h2 class="tagline text-3xl lg:text-4xl font-bold leading-relaxed">إدارة أسهل ..<br>لابتسامات أكثر</h2>
+                    <div class="tagline-bar mt-4"></div>
+                </div>
             </div>
-        </div>
-        
-        <!-- Footer -->
-        <div class="text-center mt-6">
-            <p class="text-xs text-gray-500">© 2024 عيادة الأسنان المتطورة - جميع الحقوق محفوظة</p>
-            <p class="text-xs text-gray-400 mt-1">نظام إدارة العيادات الطبية - الإصدار 2.0</p>
-        </div>
+
+            <div class="art-features">
+                <div class="art-feature"><i class="fas fa-tooth"></i><span>إدارة متكاملة<br>للعيادات</span></div>
+                <div class="art-feature"><i class="fas fa-cloud"></i><span>وصول من أي مكان<br>وفي أي وقت</span></div>
+                <div class="art-feature"><i class="fas fa-shield-alt"></i><span>أمان عالي<br>لبياناتك</span></div>
+            </div>
+        </aside>
     </div>
 </body>
 </html>

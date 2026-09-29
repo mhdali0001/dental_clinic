@@ -857,9 +857,9 @@ if (!empty($analytics_data['daily_performance'])) {
                 }
             });
 
-            // Revenue Chart
-            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-            revenueChart = new Chart(revenueCtx, {
+            // Revenue Chart (only when the page has its canvas)
+            const revenueCanvas = document.getElementById('revenueChart');
+            if (revenueCanvas) revenueChart = new Chart(revenueCanvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: chartData.dates,
@@ -976,7 +976,7 @@ if (!empty($analytics_data['daily_performance'])) {
         function refreshCharts() {
             dailyChart.update('resize');
             treatmentChart.update('resize');
-            revenueChart.update('resize');
+            revenueChart?.update('resize');
 
             // Show refresh animation
             const refreshBtns = document.querySelectorAll('[onclick="refreshCharts()"]');

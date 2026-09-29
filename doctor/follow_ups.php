@@ -165,7 +165,13 @@ try {
     </style>
 </head>
 <body class="bg-gray-100">
-    <?php include 'includes/doctor_header.php'; ?>
+    <?php
+    $pageTitle = 'المتابعات';
+    $pageIcon = 'fas fa-user-clock';
+    $pageSubtitle = 'متابعات المرضى المجدولة والمتأخرة';
+    $currentPage = 'follow_ups';
+    include 'includes/doctor_header.php';
+    ?>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
         <!-- رسائل النجاح والخطأ -->
