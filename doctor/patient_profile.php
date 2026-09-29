@@ -222,6 +222,10 @@ try {
     ];
 }
 
+// رسالة نجاح قادمة من صفحة تعديل بيانات المريض
+$profile_success_message = $_SESSION['patient_profile_success'] ?? '';
+unset($_SESSION['patient_profile_success']);
+
 // Header configuration
 $pageTitle = 'ملف المريض';
 $pageIcon = 'fas fa-user-circle';
@@ -294,6 +298,12 @@ $currentPage = 'patients';
     <?php else: ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <?php if ($profile_success_message): ?>
+            <div class="no-print bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg mb-6 flex items-center">
+                <i class="fas fa-check-circle ml-2"></i>
+                <?= htmlspecialchars($profile_success_message) ?>
+            </div>
+        <?php endif; ?>
         <div class="flex flex-col lg:flex-row gap-8">
             <!-- Main Content -->
             <div class="flex-1">
@@ -364,6 +374,11 @@ $currentPage = 'patients';
                             <div class="text-sm opacity-90">
                                 <?= $patient['status'] === 'active' ? 'نشط' : 'غير نشط' ?>
                             </div>
+                            <a href="patient_edit.php?id=<?= $patient_id ?>"
+                               class="no-print inline-flex items-center mt-3 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+                                <i class="fas fa-user-edit ml-2"></i>
+                                تعديل البيانات
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1041,6 +1056,12 @@ $currentPage = 'patients';
                            class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                             <i class="fas fa-plus ml-2"></i>
                             علاج جديد
+                        </a>
+
+                        <a href="patient_edit.php?id=<?= $patient_id ?>"
+                           class="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white p-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                            <i class="fas fa-user-edit ml-2"></i>
+                            تعديل بيانات المريض
                         </a>
 
                         <?php if ($patient['remaining_balance'] > 0): ?>
