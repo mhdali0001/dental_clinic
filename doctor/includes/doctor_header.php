@@ -24,7 +24,7 @@ $nurseBase = $headerScriptDir === 'nurse' ? '' : '../nurse/';
 $navItems = [
     'dashboard' => [
         'url' => $doctorBase . 'dashboard.php',
-        'icon' => 'fas fa-tachometer-alt',
+        'icon' => 'fas fa-home',
         'label' => 'الرئيسية',
         'badge' => null
     ],

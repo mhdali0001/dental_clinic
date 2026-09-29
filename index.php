@@ -29,7 +29,7 @@ if (isset($_SESSION['user_id'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         /* تصميم صفحة الدخول: design/Login Page.png — ألوان الهوية: design/Visual Identity.png */
         :root {
@@ -40,8 +40,8 @@ if (isset($_SESSION['user_id'])) {
             --edsm-text: #1F2937;
             --edsm-muted: #64748B;
         }
-        * { font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; }
-        .latin { font-family: 'Montserrat', 'Tajawal', sans-serif; }
+        * { font-family: 'Almarai', 'Segoe UI', Tahoma, sans-serif; }
+        .latin { font-family: 'Montserrat', 'Almarai', sans-serif; }
         body { background: #F5F9FE; color: var(--edsm-text); }
 
         /* wordmark */

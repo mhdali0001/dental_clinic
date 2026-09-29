@@ -1,7 +1,7 @@
 /* ==========================================================================
    EDSM — Dental Clinic Management System · design system
    الهوية البصرية: design/Visual Identity.png — الأزرق الأساسي #0B5ED7، الفيروزي #14B8A6،
-   الخلفية الفاتحة #EAF6FF، النص الداكن #1F2937، خط Montserrat للاتيني (Tajawal للعربي).
+   الخلفية الفاتحة #EAF6FF، النص الداكن #1F2937، خط Montserrat للاتيني وAlmarai للعربي (كما في New Style).
    يُحمَّل من ترويسة كل دور (includes/app_header.php) فيسري على كل الصفحات.
    ========================================================================== */
 
@@ -23,8 +23,8 @@
     --edsm-radius-sm: 12px;
     --edsm-shadow: 0 6px 24px rgba(11, 94, 215, 0.07), 0 1px 3px rgba(15, 23, 42, 0.05);
     --edsm-shadow-hover: 0 12px 32px rgba(11, 94, 215, 0.13), 0 2px 6px rgba(15, 23, 42, 0.06);
-    --edsm-font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
-    --edsm-font-latin: 'Montserrat', 'Tajawal', 'Segoe UI', sans-serif;
+    --edsm-font: 'Almarai', 'Segoe UI', Tahoma, sans-serif;
+    --edsm-font-latin: 'Montserrat', 'Almarai', 'Segoe UI', sans-serif;
 }
 
 /* ---------- base ---------- */
@@ -53,116 +53,137 @@ input:focus, select:focus, textarea:focus { outline: none; }
 
 .edsm-num { font-family: var(--edsm-font-latin); font-feature-settings: "tnum"; }
 
-/* ---------- top bar ---------- */
-.edsm-topbar {
-    background: linear-gradient(to left, var(--edsm-blue) 0%, #0B4AAE 38%, var(--edsm-navy) 78%, var(--edsm-navy-deep) 100%);
-    color: #fff;
+/* ---------- top bar ----------
+   مطابق لـ design/New Style.png (قياسات من الصورة المرجعية بعرض 1177px):
+   خلفية #1A4871 بزوايا سفلية دائرية 24px، شريطان مائلان فاتحان، ارتفاع 88px. */
+.edsm-topbar-wrap {
+    background: #fff;            /* يظهر خلف الزوايا الدائرية للشريط */
     position: relative;
-    overflow: hidden;
+    z-index: 50;                 /* القوائم المنسدلة فوق شريط التنقل */
 }
-.edsm-topbar::before { /* faint tooth watermark */
-    content: '';
+.edsm-topbar {
+    position: relative;
+    background-color: #1A4871;
+    border-radius: 0 0 24px 24px;
+    color: #fff;
+}
+.edsm-topbar-bg { /* طبقة الأشكال المائلة، مقصوصة بحدود الشريط */
     position: absolute;
-    inset-inline-end: -40px;
-    top: -30px;
-    width: 220px;
-    height: 200px;
-    background: url('../img/edsm-icon-light.png') no-repeat center / contain;
-    opacity: 0.05;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
     pointer-events: none;
 }
+.edsm-topbar-bg-inner { position: relative; max-width: 80rem; height: 100%; margin: 0 auto; }
+.edsm-topbar-shape { position: absolute; top: 0; bottom: 0; }
+.edsm-topbar-shape.s-mid { right: 81px; width: 290px; transform: skewX(-45deg); background: linear-gradient(#1A4F7A, #19466E); }
+.edsm-topbar-shape.s-band { right: 371px; width: 195px; transform: skewX(-45deg); background: linear-gradient(#236192, #1E5E8D); }
+.edsm-topbar-shape.s-edge { right: -1000px; width: 1170px; transform: skewX(-53deg); background: linear-gradient(#1B6593, #165B87); }
+
 .edsm-topbar-inner {
+    position: relative;
     max-width: 80rem;
+    height: 88px;
     margin: 0 auto;
-    padding: 12px 1rem;
+    padding: 0 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    position: relative;
 }
 @media (min-width: 640px) { .edsm-topbar-inner { padding-inline: 1.5rem; } }
-@media (min-width: 1024px) { .edsm-topbar-inner { padding-inline: 2rem; } }
+@media (min-width: 1024px) { .edsm-topbar-inner { padding-inline: 2.5rem; } .edsm-brand { margin-inline-start: 17px; } }
 
-.edsm-brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; }
-.edsm-brand img { width: 46px; height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18)); }
+/* logo lockup: icon on the left of the wordmark, as in the identity */
+.edsm-brand { display: flex; align-items: flex-end; gap: 12px; direction: ltr; color: #fff; text-decoration: none; flex-shrink: 0; margin-top: -12px; }
+.edsm-brand img { width: 63px; height: auto; margin-bottom: -2px; }
+.edsm-brand-text { display: inline-grid; }
 .edsm-brand-word {
     font-family: var(--edsm-font-latin);
     font-weight: 800;
-    font-size: 26px;
-    letter-spacing: 0.5px;
+    font-size: 35px;
     line-height: 1;
-    direction: ltr;
+    letter-spacing: 1.5px;
+    color: #fff;
 }
-.edsm-brand-word span { color: var(--edsm-teal-light); }
+.edsm-brand-word span { color: #10CFC8; }
 .edsm-brand-sub {
+    width: 0;
+    min-width: 100%;             /* بعرض الكلمة EDSM تماماً */
     font-family: var(--edsm-font-latin);
-    font-size: 9.5px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.72);
-    direction: ltr;
-    margin-top: 3px;
+    font-size: 6.8px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.2px;
+    color: rgba(255, 255, 255, 0.82);
     white-space: nowrap;
+    margin-top: 7px;
 }
 
-.edsm-date {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 14px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 13px;
-    line-height: 1.3;
-}
-.edsm-date i { font-size: 18px; color: var(--edsm-teal-light); }
-.edsm-date small { display: block; color: rgba(255, 255, 255, 0.75); font-size: 12px; }
+/* left cluster: [date] | [settings] [bell] | [user] */
+.edsm-tools { display: flex; align-items: center; align-self: stretch; }
+.edsm-date { display: none; align-items: center; gap: 12px; color: #fff; margin-inline-end: 58px; }
+.edsm-date svg { width: 27px; height: 27px; flex-shrink: 0; }
+.edsm-date-day { display: block; font-size: 15px; font-weight: 700; line-height: 1.4; }
+.edsm-date-full { display: block; font-size: 13.5px; font-weight: 400; line-height: 1.4; color: rgba(255, 255, 255, 0.97); }
 @media (min-width: 900px) { .edsm-date { display: flex; } }
 
-.edsm-actions { display: flex; align-items: center; gap: 8px; }
-.edsm-icon-btn {
+.edsm-sep { /* خط محفور: فاتح ثم داكن */
+    align-self: stretch;
+    width: 2px;
+    margin: 5px 11px;
+    flex-shrink: 0;
+    background-image:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.13) 32%, rgba(255, 255, 255, 0.13) 72%, rgba(255, 255, 255, 0.05)),
+        linear-gradient(to bottom, rgba(4, 25, 48, 0.10), rgba(4, 25, 48, 0.22) 50%, rgba(4, 25, 48, 0.10));
+    background-size: 1px 100%, 1px 100%;
+    background-position: 0 0, 1px 0;
+    background-repeat: no-repeat;
+}
+.edsm-date + .edsm-sep { display: none; }
+@media (min-width: 900px) { .edsm-date + .edsm-sep { display: block; } }
+
+.edsm-tool-group { display: flex; align-items: center; gap: 21px; }
+.edsm-tool-btn {
     position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    transition: background-color 0.2s ease;
     cursor: pointer;
     list-style: none;
+    transition: background-color 0.2s ease;
 }
-.edsm-icon-btn:hover { background: rgba(255, 255, 255, 0.18); }
-.edsm-icon-btn .edsm-dot {
+.edsm-tool-btn:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.edsm-tool-btn svg { width: 25px; height: 25px; }
+.edsm-badge {
     position: absolute;
-    top: -5px;
-    inset-inline-start: -5px;
-    min-width: 19px;
-    height: 19px;
-    padding: 0 5px;
+    top: 2px;
+    right: 3px;                  /* أعلى يمين الجرس كما في التصميم */
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
     border-radius: 999px;
-    background: #EF4444;
+    background: #E13944;
     color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid var(--edsm-navy);
     font-family: var(--edsm-font-latin);
+    font-size: 8.5px;
+    font-weight: 700;
+    line-height: 13px;
+    text-align: center;
+    box-shadow: 0 0 0 2px rgba(225, 57, 68, 0.28);
 }
 
 /* dropdowns (notifications + user menu) built on <details> */
-.edsm-menu { position: relative; }
+.edsm-menu { position: relative; display: flex; align-items: center; }
 .edsm-menu > summary { list-style: none; }
 .edsm-menu > summary::-webkit-details-marker { display: none; }
 .edsm-menu-panel {
     position: absolute;
-    top: calc(100% + 10px);
+    top: calc(100% + 12px);
     inset-inline-end: 0;
     min-width: 240px;
     background: #fff;
@@ -199,98 +220,92 @@ input:focus, select:focus, textarea:focus { outline: none; }
 .edsm-menu-panel hr { border: 0; border-top: 1px solid var(--edsm-border); margin: 6px 0; }
 .edsm-menu-panel .edsm-danger { color: #DC2626; }
 
+/* user: [name/role] [avatar] [chevron] */
 .edsm-user {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 5px 10px 5px 8px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    gap: 11px;
+    padding: 4px 6px;
+    border-radius: 12px;
     cursor: pointer;
     color: #fff;
+    transition: background-color 0.2s ease;
 }
-.edsm-user:hover { background: rgba(255, 255, 255, 0.16); }
-.edsm-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #fff, #DCEBFF);
-    color: var(--edsm-blue);
-    font-weight: 800;
-    font-size: 15px;
-    flex-shrink: 0;
-}
-.edsm-user-text { display: none; line-height: 1.25; text-align: start; }
-.edsm-user-text strong { display: block; font-size: 14px; font-weight: 700; }
-.edsm-user-text small { font-size: 12px; color: rgba(255, 255, 255, 0.75); }
+.edsm-user:hover { background: rgba(255, 255, 255, 0.06); }
+.edsm-user-text { display: none; line-height: 1.3; text-align: start; }
+.edsm-user-text strong { display: block; font-size: 15px; font-weight: 700; color: #fff; }
+.edsm-user-text small { display: block; font-size: 12.5px; font-weight: 400; color: rgba(255, 255, 255, 0.9); margin-top: 2px; }
 @media (min-width: 768px) { .edsm-user-text { display: block; } }
-.edsm-user .fa-chevron-down { font-size: 11px; opacity: 0.8; }
+.edsm-avatar { width: 40px; height: 40px; flex-shrink: 0; display: block; }
+.edsm-chevron { width: 17px; height: 17px; flex-shrink: 0; }
 
 /* ---------- navigation ---------- */
 .edsm-nav {
     background: #fff;
-    border-radius: 0 0 26px 26px;
-    box-shadow: 0 10px 30px rgba(11, 94, 215, 0.08);
+    border-radius: 0 0 30px 30px;
+    box-shadow: 0 10px 24px rgba(12, 53, 102, 0.07);
     position: sticky;
     top: 0;
     z-index: 40;
 }
 .edsm-nav-inner {
     max-width: 80rem;
+    height: 60px;
     margin: 0 auto;
     padding: 0 1rem;
     display: flex;
     align-items: stretch;
+    justify-content: center;
     overflow-x: auto;
     scrollbar-width: none;
 }
 .edsm-nav-inner::-webkit-scrollbar { display: none; }
-@media (min-width: 1024px) { .edsm-nav-inner { justify-content: center; } }
+@media (min-width: 1024px) { .edsm-nav-inner { padding-inline: 2.5rem; } }
+@media (max-width: 1023px) { .edsm-nav-inner { justify-content: flex-start; } }
 .edsm-nav a.edsm-nav-item {
     position: relative;
+    flex: 0 1 160px;
+    min-width: max-content;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 16px 18px;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 18px;
     white-space: nowrap;
-    color: #475569;
-    font-weight: 600;
-    font-size: 14.5px;
+    color: #0C3566;
+    font-weight: 700;
+    font-size: 15px;
     transition: color 0.2s ease;
 }
-.edsm-nav a.edsm-nav-item i { color: var(--edsm-blue); font-size: 16px; opacity: 0.85; }
-.edsm-nav a.edsm-nav-item:hover { color: var(--edsm-blue); }
+.edsm-nav a.edsm-nav-item i { color: #0C3566; font-size: 18px; transition: color 0.2s ease; }
+.edsm-nav a.edsm-nav-item:hover, .edsm-nav a.edsm-nav-item:hover i { color: #0B7CF0; }
 .edsm-nav a.edsm-nav-item + a.edsm-nav-item::before { /* separator */
     content: '';
     position: absolute;
     inset-inline-start: 0;
     top: 50%;
-    height: 18px;
+    height: 26px;
     width: 1px;
-    background: var(--edsm-border);
+    background: #E2EAF2;
     transform: translateY(-50%);
 }
-.edsm-nav a.edsm-nav-item.active { color: var(--edsm-blue); }
-.edsm-nav a.edsm-nav-item.active i { opacity: 1; }
+.edsm-nav a.edsm-nav-item.active, .edsm-nav a.edsm-nav-item.active i { color: #0B7CF0; }
 .edsm-nav a.edsm-nav-item.active::after {
     content: '';
     position: absolute;
-    inset-inline: 14px;
+    left: 14px;
+    right: 14px;
     bottom: 0;
-    height: 3px;
-    border-radius: 3px 3px 0 0;
-    background: linear-gradient(to left, var(--edsm-blue), var(--edsm-teal));
+    height: 4px;
+    border-radius: 4px;
+    background: #0A7FEA;
 }
 .edsm-nav-badge {
     min-width: 19px;
     height: 19px;
     padding: 0 5px;
     border-radius: 999px;
-    background: #EF4444;
+    background: #E13944;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -308,7 +323,7 @@ input:focus, select:focus, textarea:focus { outline: none; }
     align-items: center;
     justify-content: center;
     color: #fff;
-    background: linear-gradient(135deg, var(--edsm-blue), var(--edsm-teal));
+    background: linear-gradient(135deg, #0B7CF0, var(--edsm-teal));
 }
 @media (min-width: 1024px) { .edsm-nav-quick { display: none; } }
 
@@ -623,16 +638,20 @@ input:focus, select:focus, textarea:focus { outline: none; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 640px) {
-    .edsm-topbar-inner { gap: 8px; padding-block: 10px; }
+    .edsm-topbar-inner { height: 72px; gap: 8px; }
+    .edsm-topbar { border-radius: 0 0 20px 20px; }
     .edsm-brand { gap: 8px; }
-    .edsm-brand img { width: 38px; }
-    .edsm-brand-word { font-size: 22px; }
+    .edsm-brand img { width: 42px; }
+    .edsm-brand-word { font-size: 25px; }
     .edsm-brand-sub { display: none; }
-    .edsm-actions { gap: 6px; }
-    .edsm-actions > a.edsm-icon-btn { display: none; } /* settings: still in the user menu */
-    .edsm-icon-btn { width: 38px; height: 38px; }
-    .edsm-user { padding: 4px 6px; gap: 6px; }
-    .edsm-avatar { width: 32px; height: 32px; font-size: 14px; }
+    .edsm-tool-group { gap: 4px; }
+    .edsm-tool-group > a.edsm-tool-btn { display: none; } /* settings: still in the user menu */
+    .edsm-sep { margin-inline: 6px; }
+    .edsm-user { padding: 4px; gap: 6px; }
+    .edsm-avatar { width: 34px; height: 34px; }
+    .edsm-nav { border-radius: 0 0 22px 22px; }
+    .edsm-nav-inner { height: 54px; }
+    .edsm-nav a.edsm-nav-item { padding: 0 14px; font-size: 14px; gap: 8px; }
     .edsm-page-head { padding-top: 18px; }
     .edsm-page-head h1 { font-size: 19px; }
     .edsm-card { padding: 16px; }

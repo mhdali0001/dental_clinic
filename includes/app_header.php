@@ -26,7 +26,7 @@ $appMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
 <link href="<?= $appAssetBase ?>css/edsm.css" rel="stylesheet">
 <script>
     // الأيقونة في تبويب المتصفح (الصفحات لا تضعها في <head>)
@@ -39,61 +39,98 @@ $appMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'ما
     })();
 </script>
 
+<div class="edsm-topbar-wrap">
 <header class="edsm-topbar">
+    <!-- الأشكال المائلة في الخلفية (design/New Style.png) -->
+    <div class="edsm-topbar-bg" aria-hidden="true">
+        <div class="edsm-topbar-bg-inner">
+            <span class="edsm-topbar-shape s-mid"></span>
+            <span class="edsm-topbar-shape s-band"></span>
+            <span class="edsm-topbar-shape s-edge"></span>
+        </div>
+    </div>
+
     <div class="edsm-topbar-inner">
         <a href="<?= htmlspecialchars($appHomeUrl ?? '#') ?>" class="edsm-brand" title="الرئيسية">
-            <img src="<?= $appAssetBase ?>img/edsm-icon-light.png" alt="EDSM">
-            <div>
-                <div class="edsm-brand-word">EDS<span>M</span></div>
-                <div class="edsm-brand-sub">Dental Clinic Management System</div>
-            </div>
+            <img src="<?= $appAssetBase ?>img/edsm-icon-light.png" alt="">
+            <span class="edsm-brand-text">
+                <span class="edsm-brand-word">EDS<span>M</span></span>
+                <span class="edsm-brand-sub">Dental Clinic Management System</span>
+            </span>
         </a>
 
-        <div class="edsm-date" aria-label="التاريخ">
-            <i class="far fa-calendar-alt"></i>
-            <div>
-                <span id="edsmDateDay"><?= $appDays[(int)date('w')] ?></span>
-                <small id="edsmDateFull"><?= (int)date('j') . ' ' . $appMonths[(int)date('n')] . ' ' . date('Y') ?></small>
-            </div>
-        </div>
-
-        <div class="edsm-actions">
-            <details class="edsm-menu">
-                <summary class="edsm-icon-btn" title="التنبيهات">
-                    <i class="fas fa-bell"></i>
-                    <?php if ($appNotificationTotal > 0): ?>
-                        <span class="edsm-dot"><?= min(99, $appNotificationTotal) ?></span>
-                    <?php endif; ?>
-                </summary>
-                <div class="edsm-menu-panel">
-                    <?php if (empty($appNotifications)): ?>
-                        <div class="edsm-menu-empty"><i class="fas fa-check-circle ml-1"></i> لا توجد تنبيهات جديدة</div>
-                    <?php else: ?>
-                        <?php foreach ($appNotifications as $item): ?>
-                            <a href="<?= htmlspecialchars($item['url']) ?>">
-                                <i class="<?= $item['icon'] ?> text-blue-600"></i>
-                                <?= htmlspecialchars($item['label']) ?>
-                                <span class="edsm-menu-count"><?= min(99, (int)$item['badge']) ?></span>
-                            </a>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+        <div class="edsm-tools">
+            <div class="edsm-date" aria-label="التاريخ">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3.5" y="5" width="17" height="15.5" rx="2.6"/>
+                    <path d="M8 3v4M16 3v4M3.5 10h17"/>
+                    <g fill="currentColor" stroke="none">
+                        <rect x="8.4" y="12.4" width="3" height="2.6" rx=".6"/><rect x="12.6" y="12.4" width="3" height="2.6" rx=".6"/>
+                        <rect x="8.4" y="16.1" width="3" height="2.6" rx=".6"/><rect x="12.6" y="16.1" width="3" height="2.6" rx=".6"/>
+                    </g>
+                </svg>
+                <div>
+                    <span class="edsm-date-day" id="edsmDateDay"><?= $appDays[(int)date('w')] ?></span>
+                    <span class="edsm-date-full" id="edsmDateFull"><?= (int)date('j') . ' ' . $appMonths[(int)date('n')] . ' ' . date('Y') ?></span>
                 </div>
-            </details>
+            </div>
+            <span class="edsm-sep" aria-hidden="true"></span>
 
-            <?php if (!empty($appSettingsUrl)): ?>
-                <a href="<?= htmlspecialchars($appSettingsUrl) ?>" class="edsm-icon-btn" title="الإعدادات">
-                    <i class="fas fa-cog"></i>
-                </a>
-            <?php endif; ?>
+            <div class="edsm-tool-group">
+                <?php if (!empty($appSettingsUrl)): ?>
+                    <a href="<?= htmlspecialchars($appSettingsUrl) ?>" class="edsm-tool-btn" title="الإعدادات" aria-label="الإعدادات">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </a>
+                <?php endif; ?>
+
+                <details class="edsm-menu">
+                    <summary class="edsm-tool-btn" title="التنبيهات" aria-label="التنبيهات">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M10 5a2 2 0 1 1 4 0 7 7 0 0 1 4 6v3a4 4 0 0 0 2 3H4a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/>
+                            <path d="M9 17v1a3 3 0 0 0 6 0v-1"/>
+                        </svg>
+                        <?php if ($appNotificationTotal > 0): ?>
+                            <span class="edsm-badge"><?= min(99, $appNotificationTotal) ?></span>
+                        <?php endif; ?>
+                    </summary>
+                    <div class="edsm-menu-panel">
+                        <?php if (empty($appNotifications)): ?>
+                            <div class="edsm-menu-empty"><i class="fas fa-check-circle ml-1"></i> لا توجد تنبيهات جديدة</div>
+                        <?php else: ?>
+                            <?php foreach ($appNotifications as $item): ?>
+                                <a href="<?= htmlspecialchars($item['url']) ?>">
+                                    <i class="<?= $item['icon'] ?> text-blue-600"></i>
+                                    <?= htmlspecialchars($item['label']) ?>
+                                    <span class="edsm-menu-count"><?= min(99, (int)$item['badge']) ?></span>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            </div>
+            <span class="edsm-sep" aria-hidden="true"></span>
 
             <details class="edsm-menu">
-                <summary class="edsm-user">
-                    <span class="edsm-avatar"><i class="<?= htmlspecialchars($appUser['icon'] ?? 'fas fa-user') ?>"></i></span>
+                <summary class="edsm-user" aria-label="حساب المستخدم">
                     <span class="edsm-user-text">
                         <strong><?= htmlspecialchars($appUserName) ?></strong>
                         <small><?= htmlspecialchars($appUser['role'] ?? '') ?></small>
                     </span>
-                    <i class="fas fa-chevron-down"></i>
+                    <svg class="edsm-avatar" viewBox="0 0 40 40" aria-hidden="true">
+                        <defs>
+                            <clipPath id="edsmAvatarClip"><circle cx="20" cy="20" r="20"/></clipPath>
+                            <linearGradient id="edsmAvatarBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9D3FE"/><stop offset="1" stop-color="#8EBEF6"/></linearGradient>
+                        </defs>
+                        <g clip-path="url(#edsmAvatarClip)">
+                            <rect width="40" height="40" fill="url(#edsmAvatarBg)"/>
+                            <circle cx="20" cy="15.6" r="7.2" fill="#fff"/>
+                            <path d="M4.5 40c.9-8.2 7.3-13.3 15.5-13.3S34.6 31.8 35.5 40z" fill="#fff"/>
+                        </g>
+                    </svg>
+                    <svg class="edsm-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                 </summary>
                 <div class="edsm-menu-panel">
                     <?php if (!empty($appSettingsUrl)): ?>
@@ -109,6 +146,7 @@ $appMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'ما
         </div>
     </div>
 </header>
+</div>
 
 <nav class="edsm-nav" aria-label="التنقل الرئيسي">
     <div class="edsm-nav-inner">

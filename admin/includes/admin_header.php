@@ -31,7 +31,7 @@ $pdo = $db->getConnection();
 $navItems = [
     'dashboard' => [
         'url' => 'dashboard.php',
-        'icon' => 'fas fa-tachometer-alt',
+        'icon' => 'fas fa-home',
         'label' => 'الرئيسية',
         'badge' => null
     ],

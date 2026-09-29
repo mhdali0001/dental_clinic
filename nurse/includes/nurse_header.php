@@ -17,7 +17,7 @@ $nurse_id = $_SESSION['user_id'] ?? 0;
 $navItems = [
     'dashboard' => [
         'url' => 'dashboard.php',
-        'icon' => 'fas fa-tachometer-alt',
+        'icon' => 'fas fa-home',
         'label' => 'الرئيسية',
         'badge' => null
     ],
