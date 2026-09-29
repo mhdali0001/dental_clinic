@@ -576,7 +576,7 @@ try {
         }
         
         // Analytics topbar click functionality
-        document.querySelector('.analytics-topbar').addEventListener('click', function() {
+        document.querySelector('.analytics-topbar')?.addEventListener('click', function() {
             // Create a tooltip or modal showing more details
             const tooltip = document.createElement('div');
             tooltip.className = 'fixed top-20 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50 fade-in';

@@ -320,12 +320,28 @@ $currentPage = 'dashboard';
         <i class="fas fa-bolt text-yellow-500 ml-2"></i>
         إجراءات سريعة
     </h3>
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <a href="treatment_new.php" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg text-center transition hover-scale">
             <i class="fas fa-plus-square text-2xl mb-2"></i>
             <div class="font-semibold">إضافة علاج جديد</div>
         </a>
-        
+
+        <!-- ميزات السكرتاريا المتاحة للطبيب -->
+        <a href="../nurse/patients.php?action=add" class="bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-lg text-center transition hover-scale">
+            <i class="fas fa-user-plus text-2xl mb-2"></i>
+            <div class="font-semibold">إضافة مريض جديد</div>
+        </a>
+
+        <a href="../nurse/appointments.php?action=add" class="bg-blue-700 hover:bg-blue-800 text-white p-4 rounded-lg text-center transition hover-scale">
+            <i class="fas fa-calendar-plus text-2xl mb-2"></i>
+            <div class="font-semibold">حجز موعد</div>
+        </a>
+
+        <a href="../nurse/patient_balance.php" class="bg-green-700 hover:bg-green-800 text-white p-4 rounded-lg text-center transition hover-scale">
+            <i class="fas fa-cash-register text-2xl mb-2"></i>
+            <div class="font-semibold">تسجيل دفعة</div>
+        </a>
+
         <a href="appointments.php" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg text-center transition hover-scale">
             <i class="fas fa-calendar-check text-2xl mb-2"></i>
             <div class="font-semibold">جدول المواعيد</div>

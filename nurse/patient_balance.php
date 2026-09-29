@@ -4,7 +4,7 @@ require_once '../config/database.php';
 require_once '../includes/functions.php';
 
 // التحقق من تسجيل الدخول ونوع المستخدم
-checkLogin('nurse');
+checkLogin(['nurse', 'doctor']);
 
 // Set page variables for header
 $pageTitle = 'أرصدة المرضى';
@@ -24,14 +24,22 @@ $error_message = '';
 // إضافة دفعة جديدة
 if ($_POST && $action === 'add_payment') {
     try {
+        // كل دفعة مرتبطة بعلاج (العمود treatment_id في جدول payments إلزامي)
+        $payment_treatment_id = (int)($_POST['treatment_id'] ?? 0);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM treatments WHERE id = ? AND patient_id = ?");
+        $stmt->execute([$payment_treatment_id, (int)($_POST['patient_id'] ?? 0)]);
+        if (!$payment_treatment_id || !$stmt->fetchColumn()) {
+            throw new InvalidArgumentException('يرجى اختيار العلاج الذي تُسجَّل عليه الدفعة');
+        }
+
         $stmt = $pdo->prepare("
             INSERT INTO payments (patient_id, treatment_id, amount, payment_method, receipt_number, notes, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        
+
         $result = $stmt->execute([
             $_POST['patient_id'],
-            $_POST['treatment_id'] ?? null,
+            $payment_treatment_id,
             $_POST['amount'],
             $_POST['payment_method'],
             $_POST['receipt_number'] ?? '',
@@ -48,6 +56,8 @@ if ($_POST && $action === 'add_payment') {
             $success_message = "تم إضافة الدفعة بنجاح";
             $action = ''; // إخفاء النموذج
         }
+    } catch (InvalidArgumentException $e) {
+        $error_message = $e->getMessage();
     } catch (PDOException $e) {
         $error_message = "خطأ في إضافة الدفعة: " . $e->getMessage();
     }
@@ -190,7 +200,7 @@ try {
 </head>
 <body class="bg-gray-50">
 
-<?php include 'includes/nurse_header.php'; ?>
+<?php include 'includes/role_header.php'; ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
@@ -359,12 +369,12 @@ try {
                             </select>
                         </div>
                         
-                        <!-- Treatment Selection (Optional) -->
+                        <!-- Treatment Selection -->
                         <div class="md:col-span-2">
-                            <label class="block text-gray-700 font-semibold mb-2">العلاج (اختياري)</label>
-                            <select name="treatment_id" id="treatmentSelect"
+                            <label class="block text-gray-700 font-semibold mb-2">العلاج *</label>
+                            <select name="treatment_id" id="treatmentSelect" required
                                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="">دفعة عامة (غير مرتبطة بعلاج محدد)</option>
+                                <option value="">اختر المريض أولاً...</option>
                             </select>
                         </div>
                         
@@ -629,37 +639,51 @@ try {
         });
         
         // Load patient treatments for payment form
+        const preselectedTreatmentId = <?= json_encode((string)($_GET['treatment_id'] ?? '')) ?>;
+
         async function loadPatientTreatments(patientId) {
             const treatmentSelect = document.getElementById('treatmentSelect');
             
             if (!patientId) {
-                treatmentSelect.innerHTML = '<option value="">دفعة عامة (غير مرتبطة بعلاج محدد)</option>';
+                treatmentSelect.innerHTML = '<option value="">اختر المريض أولاً...</option>';
                 return;
             }
-            
+
             try {
                 const response = await fetch(`../api/treatments.php?patient_id=${patientId}`);
                 const data = await response.json();
-                
-                let options = '<option value="">دفعة عامة (غير مرتبطة بعلاج محدد)</option>';
-                
+
+                const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+                let options = '';
+                let billableIds = [];
+
                 if (data.success && data.treatments) {
                     data.treatments.forEach(treatment => {
                         const cost = parseFloat(treatment.cost || 0);
                         const paid = parseFloat(treatment.total_paid || 0);
                         const remaining = cost - paid;
-                        
+
                         if (cost > 0) {
+                            billableIds.push(String(treatment.id));
                             options += `<option value="${treatment.id}">
-                                ${treatment.treatment_type} - ${treatment.treatment_date} 
+                                ${escapeHtml(treatment.treatment_details || treatment.treatment_type)} - ${escapeHtml(treatment.treatment_date)}
                                 (التكلفة: ${Math.round(cost)} ليرة سورية، المتبقي: ${Math.round(remaining)} ليرة سورية)
                             </option>`;
                         }
                     });
                 }
-                
-                treatmentSelect.innerHTML = options;
-                
+
+                treatmentSelect.innerHTML = billableIds.length
+                    ? '<option value="">اختر العلاج...</option>' + options
+                    : '<option value="">لا توجد علاجات بتكلفة لهذا المريض</option>';
+
+                // العلاج المحدد في الرابط (زر "دفعة" من صفحات الطبيب)، أو العلاج الوحيد إن وُجد
+                if (billableIds.includes(preselectedTreatmentId)) {
+                    treatmentSelect.value = preselectedTreatmentId;
+                } else if (billableIds.length === 1) {
+                    treatmentSelect.value = billableIds[0];
+                }
+
             } catch (error) {
                 console.error('Error loading treatments:', error);
                 treatmentSelect.innerHTML = '<option value="">خطأ في تحميل العلاجات</option>';
@@ -670,10 +694,11 @@ try {
         const form = document.querySelector('form[method="POST"]');
         form?.addEventListener('submit', function(e) {
             const patientId = this.querySelector('select[name="patient_id"]').value;
+            const treatmentId = this.querySelector('select[name="treatment_id"]').value;
             const amount = this.querySelector('input[name="amount"]').value;
             const paymentMethod = this.querySelector('select[name="payment_method"]').value;
-            
-            if (!patientId || !amount || !paymentMethod) {
+
+            if (!patientId || !treatmentId || !amount || !paymentMethod) {
                 e.preventDefault();
                 alert('يرجى ملء جميع الحقول المطلوبة');
                 return;

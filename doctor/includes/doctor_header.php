@@ -13,46 +13,58 @@ $currentPage = $currentPage ?? '';
 $doctor_name = $_SESSION['user_name'] ?? 'الطبيب';
 $doctor_id = $_SESSION['user_id'] ?? 0;
 
+// الترويسة تُعرض أيضاً في صفحات السكرتاريا (nurse/) المشتركة مع الطبيب،
+// لذلك تُبنى الروابط نسبةً إلى مجلد الصفحة الحالية
+$headerScriptDir = basename(dirname($_SERVER['SCRIPT_NAME']));
+$doctorBase = $headerScriptDir === 'doctor' ? '' : '../doctor/';
+$nurseBase = $headerScriptDir === 'nurse' ? '' : '../nurse/';
+
 // Define navigation items
 $navItems = [
     'dashboard' => [
-        'url' => 'dashboard.php',
+        'url' => $doctorBase . 'dashboard.php',
         'icon' => 'fas fa-tachometer-alt',
         'label' => 'الرئيسية',
         'badge' => null
     ],
     'appointments' => [
-        'url' => 'appointments.php',
+        'url' => $doctorBase . 'appointments.php',
         'icon' => 'fas fa-calendar-check',
         'label' => 'المواعيد',
         'badge' => null
     ],
     'treatments' => [
-        'url' => 'treatments.php',
+        'url' => $doctorBase . 'treatments.php',
         'icon' => 'fas fa-file-medical',
         'label' => 'العلاجات',
         'badge' => null
     ],
     'follow_ups' => [
-        'url' => 'follow_ups.php',
+        'url' => $doctorBase . 'follow_ups.php',
         'icon' => 'fas fa-user-clock',
         'label' => 'المتابعات',
         'badge' => null
     ],
     'patients' => [
-        'url' => 'patients.php',
+        'url' => $doctorBase . 'patients.php',
         'icon' => 'fas fa-users',
         'label' => 'المرضى',
         'badge' => null
     ],
+    'patient_balance' => [
+        'url' => $nurseBase . 'patient_balance.php',
+        'icon' => 'fas fa-wallet',
+        'label' => 'الحسابات',
+        'badge' => null
+    ],
     'reports' => [
-        'url' => 'reports.php',
+        'url' => $doctorBase . 'reports.php',
         'icon' => 'fas fa-chart-bar',
         'label' => 'التقارير',
         'badge' => null
     ],
     'analytics' => [
-        'url' => 'analytics.php',
+        'url' => $doctorBase . 'analytics.php',
         'icon' => 'fas fa-chart-line',
         'label' => 'التحليلات',
         'badge' => null
@@ -174,7 +186,7 @@ try {
                 </div>
 
                 <!-- Settings -->
-                <a href="settings.php" class="classic-icon-btn text-white hover:text-gray-200 p-2 transition-all duration-200">
+                <a href="<?= $doctorBase ?>settings.php" class="classic-icon-btn text-white hover:text-gray-200 p-2 transition-all duration-200">
                     <i class="fas fa-cogs text-lg"></i>
                 </a>
 
@@ -208,10 +220,10 @@ try {
 
             <!-- Mobile Quick Actions -->
             <div class="lg:hidden flex space-x-2 space-x-reverse py-3 mr-3">
-                <a href="treatment_new.php" class="classic-quick-btn bg-green-600 hover:bg-green-700 text-white p-2 rounded border border-green-500">
+                <a href="<?= $doctorBase ?>treatment_new.php" class="classic-quick-btn bg-green-600 hover:bg-green-700 text-white p-2 rounded border border-green-500">
                     <i class="fas fa-plus text-sm"></i>
                 </a>
-                <a href="appointments.php?filter=today" class="classic-quick-btn bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded border border-yellow-500">
+                <a href="<?= $doctorBase ?>appointments.php?filter=today" class="classic-quick-btn bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded border border-yellow-500">
                     <i class="fas fa-calendar-day text-sm"></i>
                 </a>
             </div>
@@ -226,7 +238,7 @@ try {
         <nav class="flex" aria-label="Breadcrumb">
             <ol class="inline-flex items-center space-x-1 md:space-x-3 space-x-reverse">
                 <li class="inline-flex items-center">
-                    <a href="dashboard.php" class="text-gray-700 hover:text-blue-600">
+                    <a href="<?= $doctorBase ?>dashboard.php" class="text-gray-700 hover:text-blue-600">
                         <i class="fas fa-home ml-2"></i>
                         الرئيسية
                     </a>
@@ -474,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Auto-refresh notification badges every 5 minutes
 setInterval(function() {
     // Add AJAX call to refresh badge counts
-    fetch('includes/get_notification_counts.php')
+    fetch('<?= $doctorBase ?>includes/get_notification_counts.php')
         .then(response => response.json())
         .then(data => {
             // Update badge counts

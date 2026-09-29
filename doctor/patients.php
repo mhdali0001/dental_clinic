@@ -379,6 +379,12 @@ $currentPage = 'patients';
                     </form>
                 </div>
 
+                <a href="../nurse/patients.php?action=add"
+                   class="bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-xl shadow-sm transition flex items-center whitespace-nowrap">
+                    <i class="fas fa-user-plus ml-2"></i>
+                    إضافة مريض
+                </a>
+
                 <!-- View Toggle -->
                 <div class="view-toggle">
                     <a href="?<?= http_build_query(array_merge($_GET, ['view' => 'cards'])) ?>"

@@ -1,12 +1,13 @@
 <?php
 // دالة للتحقق من تسجيل الدخول
+// $requiredRole: دور واحد ('nurse') أو عدة أدوار (['nurse', 'doctor'])
 function checkLogin($requiredRole = null) {
     if (!isset($_SESSION['user_id'])) {
         header('Location: ../index.php');
         exit;
     }
-    
-    if ($requiredRole && $_SESSION['user_role'] != $requiredRole) {
+
+    if ($requiredRole && !in_array($_SESSION['user_role'] ?? '', (array)$requiredRole, true)) {
         header('Location: ../index.php');
         exit;
     }

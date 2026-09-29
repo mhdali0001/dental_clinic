@@ -832,10 +832,30 @@ try {
             color: #d97706; 
             border-right: 3px solid #f59e0b;
         }
-        .quadrant-label.lower-right { 
-            bottom: 25px; left: 25px; 
-            color: #1d4ed8; 
+        .quadrant-label.lower-right {
+            bottom: 25px; left: 25px;
+            color: #1d4ed8;
             border-left: 3px solid #3b82f6;
+        }
+
+        /* تسمية الربع قابلة للنقر لاختيار كل أسنانه */
+        .quadrant-label.quadrant-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .quadrant-label.quadrant-toggle:hover {
+            background: #ffffff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .quadrant-label.quadrant-toggle.all-selected {
+            background: #ffffff;
+            box-shadow: 0 0 0 2px currentColor;
+        }
+        .quadrant-label .quadrant-check {
+            font-size: 14px;
         }
         
         /* Tooth type specific colors */
@@ -1127,11 +1147,19 @@ try {
                                 <p class="text-gray-500 text-sm">لم يتم تحديد أي أسنان بعد</p>
                             </div>
                             
-                            <div class="mt-4">
-                                <button type="button" id="clearSelection" class="w-full bg-gray-500 text-white py-2 px-4 rounded-lg text-sm">
+                            <div class="mt-4 grid grid-cols-2 gap-2">
+                                <button type="button" id="selectAllTeeth" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-2 rounded-lg text-sm">
+                                    <i class="fas fa-check-double ml-1"></i>
+                                    اختيار الكل
+                                </button>
+                                <button type="button" id="clearSelection" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-2 rounded-lg text-sm">
                                     مسح التحديد
                                 </button>
                             </div>
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-info-circle ml-1"></i>
+                                لاختيار ربع كامل اضغط على اسم الربع في المخطط
+                            </p>
                         </div>
                         
                         <!-- Enhanced Treatment Legend -->
@@ -1785,6 +1813,7 @@ try {
         // Global variables for custom dental chart
         let customDentalData = null;
         let selectedTeeth = new Set();
+        let dentalChartResizeBound = false;
         
         document.addEventListener('DOMContentLoaded', function() {
             initPatientSearch();
@@ -2002,21 +2031,29 @@ try {
                 chartContainer.appendChild(quad);
             });
             
-            // Add quadrant labels
-            const labels = [
-                {text: 'الربع 1 (18-11)', class: 'upper-right'},
-                {text: 'الربع 2 (21-28)', class: 'upper-left'},
-                {text: 'الربع 3 (1-8)', class: 'lower-left'}, 
-                {text: 'الربع 4 (8-1)', class: 'lower-right'}
+            // Add quadrant labels — each label toggles selection of all teeth in its quadrant
+            const quadrantLabels = [
+                {key: 'upper_right', class: 'upper-right', number: 1},
+                {key: 'upper_left', class: 'upper-left', number: 2},
+                {key: 'lower_left', class: 'lower-left', number: 3},
+                {key: 'lower_right', class: 'lower-right', number: 4}
             ];
-            
-            labels.forEach(label => {
-                const labelEl = document.createElement('div');
-                labelEl.className = `quadrant-label ${label.class}`;
-                labelEl.textContent = label.text;
+
+            quadrantLabels.forEach(label => {
+                const teeth = customDentalData.quadrants[label.key]?.teeth || [];
+                if (teeth.length === 0) return;
+
+                const labelEl = document.createElement('button');
+                labelEl.type = 'button';
+                labelEl.className = `quadrant-label quadrant-toggle ${label.class}`;
+                labelEl.dataset.quadrant = label.key;
+                labelEl.title = 'اضغط لاختيار أو إلغاء اختيار كل أسنان هذا الربع';
+                labelEl.innerHTML = `<i class="quadrant-check far fa-square"></i>` +
+                    `<span>الربع ${label.number} <span dir="ltr">(${escapeHtml(teeth[0].number)}-${escapeHtml(teeth[teeth.length - 1].number)})</span></span>`;
+                labelEl.addEventListener('click', () => toggleQuadrantSelection(label.key));
                 chartContainer.appendChild(labelEl);
             });
-            
+
             // Add teeth for each quadrant
             Object.keys(customDentalData.quadrants).forEach(quadrantKey => {
                 const quadrant = customDentalData.quadrants[quadrantKey];
@@ -2024,11 +2061,52 @@ try {
                     createToothElement(tooth, quadrantKey, index, chartContainer);
                 });
             });
-            
-            // Add resize handler for responsive positioning
-            window.addEventListener('resize', debounce(function() {
-                initializeCustomDentalChart();
-            }, 250));
+
+            updateQuadrantToggles();
+
+            // Add resize handler for responsive positioning (once — this function re-runs on every resize)
+            if (!dentalChartResizeBound) {
+                dentalChartResizeBound = true;
+                window.addEventListener('resize', debounce(function() {
+                    initializeCustomDentalChart();
+                }, 250));
+            }
+        }
+
+        function getChartTeethNumbers(quadrantKey = null) {
+            if (!customDentalData || !customDentalData.quadrants) return [];
+            const quadrants = quadrantKey ? [customDentalData.quadrants[quadrantKey]] : Object.values(customDentalData.quadrants);
+            return quadrants.filter(Boolean).flatMap(quadrant => quadrant.teeth.map(tooth => tooth.number));
+        }
+
+        // Select or deselect a group of teeth, then refresh everything that depends on the selection
+        function setTeethSelected(toothNumbers, selected) {
+            toothNumbers.forEach(number => selected ? selectedTeeth.add(number) : selectedTeeth.delete(number));
+            document.querySelectorAll('#customDentalChart .tooth-element').forEach(el => {
+                el.classList.toggle('selected', selectedTeeth.has(el.dataset.toothNumber));
+            });
+            updateSelectedTeethList(selectedTeeth);
+            toggleTreatmentSelection(selectedTeeth.size > 0);
+            updateQuadrantToggles();
+        }
+
+        function toggleQuadrantSelection(quadrantKey) {
+            const teeth = getChartTeethNumbers(quadrantKey);
+            const allSelected = teeth.length > 0 && teeth.every(number => selectedTeeth.has(number));
+            setTeethSelected(teeth, !allSelected);
+        }
+
+        // Quadrant label checkbox: empty / partial / all selected
+        function updateQuadrantToggles() {
+            document.querySelectorAll('#customDentalChart .quadrant-toggle').forEach(labelEl => {
+                const teeth = getChartTeethNumbers(labelEl.dataset.quadrant);
+                const count = teeth.filter(number => selectedTeeth.has(number)).length;
+                const allSelected = count > 0 && count === teeth.length;
+                labelEl.querySelector('.quadrant-check').className = 'quadrant-check ' +
+                    (allSelected ? 'fas fa-check-square' : (count > 0 ? 'fas fa-minus-square' : 'far fa-square'));
+                labelEl.classList.toggle('all-selected', allSelected);
+                labelEl.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
+            });
         }
         
         // Debounce function for resize handler
@@ -2051,7 +2129,11 @@ try {
             toothEl.dataset.toothNumber = tooth.number;
             toothEl.dataset.toothType = tooth.type;
             toothEl.dataset.toothName = tooth.name;
-            
+            // keep the highlight when the chart is redrawn (e.g. on resize)
+            if (selectedTeeth.has(tooth.number)) {
+                toothEl.classList.add('selected');
+            }
+
             // Add tooth icon
             toothEl.innerHTML = tooth.icon || '🦷';
             
@@ -2137,8 +2219,9 @@ try {
             
             updateSelectedTeethList(selectedTeeth);
             toggleTreatmentSelection(selectedTeeth.size > 0);
+            updateQuadrantToggles();
         }
-        
+
         // Show tooth tooltip
         function showToothTooltip(tooth, event) {
             const tooltip = document.getElementById('tooth-info');
@@ -2176,6 +2259,7 @@ try {
             document.querySelectorAll('.tooth-element.selected').forEach(tooth => {
                 tooth.classList.remove('selected');
             });
+            updateQuadrantToggles();
         }
         
         // Get selected teeth array (for compatibility)
@@ -2184,6 +2268,11 @@ try {
         }
         
         function initializeEventListeners() {
+            // Select all teeth button
+            document.getElementById('selectAllTeeth').addEventListener('click', function() {
+                setTeethSelected(getChartTeethNumbers(), true);
+            });
+
             // Clear selection button
             document.getElementById('clearSelection').addEventListener('click', function() {
                 clearAllToothSelections();
@@ -2487,9 +2576,11 @@ try {
                 return;
             }
             
-            let html = '<div class="space-y-1">';
-            selectedTeethArray.forEach(toothId => {
-                html += `<div class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">السن رقم ${toothId}</div>`;
+            // compact chips, sorted, so selecting a whole quadrant or all teeth stays readable
+            const sortedTeeth = [...selectedTeethArray].sort((a, b) => String(a).localeCompare(String(b), 'en', { numeric: true }));
+            let html = '<div class="flex flex-wrap gap-1">';
+            sortedTeeth.forEach(toothId => {
+                html += `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">${escapeHtml(toothId)}</span>`;
             });
             html += '</div>';
             

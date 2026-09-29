@@ -4,7 +4,7 @@ require_once '../config/database.php';
 require_once '../includes/functions.php';
 
 // التحقق من تسجيل الدخول ونوع المستخدم
-checkLogin('nurse');
+checkLogin(['nurse', 'doctor']);
 
 // Set page variables for header
 $pageTitle = 'تفاصيل المريض';
@@ -182,7 +182,7 @@ function getRegistrationDuration($registration_date) {
 </head>
 <body class="bg-gray-50">
 
-<?php include 'includes/nurse_header.php'; ?>
+<?php include 'includes/role_header.php'; ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         

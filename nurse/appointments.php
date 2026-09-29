@@ -3,7 +3,7 @@ session_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 
-checkLogin('nurse');
+checkLogin(['nurse', 'doctor']);
 
 // Set page variables for header
 $pageTitle = 'إدارة المواعيد';
@@ -34,11 +34,11 @@ if ($_POST && $action === 'add') {
             $error_message = "يوجد موعد آخر في نفس الوقت!";
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO appointments (patient_id, appointment_date, appointment_time, treatment_type, 
-                                        estimated_duration, notes, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, 'scheduled', NOW())
+                INSERT INTO appointments (patient_id, appointment_date, appointment_time, treatment_type,
+                                        estimated_duration, notes, status, created_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, NOW())
             ");
-            
+
             $result = $stmt->execute([
                 $_POST['patient_id'],
                 $_POST['appointment_date'],
@@ -46,9 +46,17 @@ if ($_POST && $action === 'add') {
                 $_POST['treatment_type'],
                 $_POST['estimated_duration'] ?? 30,
                 $_POST['notes'] ?? '',
+                $_SESSION['user_id'],
             ]);
-            
+
             if ($result) {
+                // الطبيب يعود إلى جدول مواعيده على تاريخ الموعد الجديد
+                if ($_SESSION['user_role'] === 'doctor') {
+                    $_SESSION['appointments_success'] = "تم حجز الموعد بنجاح";
+                    header('Location: ../doctor/appointments.php?date=' . urlencode($_POST['appointment_date']));
+                    exit;
+                }
+
                 $success_message = "تم حجز الموعد بنجاح";
                 $action = ''; // إخفاء النموذج
             }
@@ -148,6 +156,9 @@ try {
 
 // مريض محدد مسبقاً
 $preselected_patient = $_GET['patient_id'] ?? null;
+
+// إغلاق نموذج الحجز: الطبيب يعود إلى جدول مواعيده
+$form_close_url = ($_SESSION['user_role'] === 'doctor' ? '../doctor/appointments.php' : '') . '?date=' . urlencode($selected_date);
 ?>
 
 <!DOCTYPE html>
@@ -172,7 +183,7 @@ $preselected_patient = $_GET['patient_id'] ?? null;
 </head>
 <body class="bg-gray-50">
 
-<?php include 'includes/nurse_header.php'; ?>
+<?php include 'includes/role_header.php'; ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
@@ -260,7 +271,7 @@ $preselected_patient = $_GET['patient_id'] ?? null;
                         <i class="fas fa-calendar-plus text-green-600 ml-2"></i>
                         حجز موعد جديد
                     </h3>
-                    <a href="?date=<?= $selected_date ?>" class="text-gray-400 hover:text-gray-600">
+                    <a href="<?= $form_close_url ?>" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times text-2xl"></i>
                     </a>
                 </div>
@@ -386,7 +397,7 @@ $preselected_patient = $_GET['patient_id'] ?? null;
                             <i class="fas fa-calendar-plus ml-2"></i>
                             حجز الموعد
                         </button>
-                        <a href="?date=<?= $selected_date ?>" 
+                        <a href="<?= $form_close_url ?>" 
                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 px-4 rounded-lg transition duration-200 text-center">
                             إلغاء
                         </a>

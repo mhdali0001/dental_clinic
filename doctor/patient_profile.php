@@ -1078,7 +1078,7 @@ $currentPage = 'patients';
                             إضافة ملاحظة
                         </button>
 
-                        <a href="appointments.php?patient_id=<?= $patient_id ?>"
+                        <a href="../nurse/appointments.php?action=add&patient_id=<?= $patient_id ?>"
                            class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                             <i class="fas fa-calendar-plus ml-2"></i>
                             حجز موعد

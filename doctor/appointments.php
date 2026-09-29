@@ -12,7 +12,9 @@ $pdo = $db->getConnection();
 
 // معالجة الإجراءات
 $action = $_GET['action'] ?? '';
-$success_message = '';
+// رسالة نجاح قادمة من صفحة حجز الموعد (صفحة السكرتاريا المشتركة)
+$success_message = $_SESSION['appointments_success'] ?? '';
+unset($_SESSION['appointments_success']);
 $error_message = '';
 $doctor_id = $_SESSION['user_id'];
 
@@ -246,7 +248,12 @@ $currentPage = 'appointments';
                 </div>
                 
                 <div class="flex gap-4">
-                    <a href="treatment_new.php" 
+                    <a href="../nurse/appointments.php?action=add&date=<?= urlencode($selected_date < $today ? $today : $selected_date) ?>"
+                       class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition flex items-center">
+                        <i class="fas fa-calendar-plus ml-2"></i>
+                        حجز موعد
+                    </a>
+                    <a href="treatment_new.php"
                        class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition flex items-center">
                         <i class="fas fa-plus ml-2"></i>
                         إضافة علاج

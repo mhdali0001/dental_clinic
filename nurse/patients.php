@@ -4,7 +4,7 @@ require_once '../config/database.php';
 require_once '../includes/functions.php';
 
 // التحقق من تسجيل الدخول ونوع المستخدم
-checkLogin('nurse');
+checkLogin(['nurse', 'doctor']);
 
 // الحصول على اتصال قاعدة البيانات
 $db = getDB();
@@ -129,6 +129,14 @@ if ($_POST && $action === 'add') {
             }
 
             $pdo->commit();
+
+            // الطبيب ينتقل مباشرة إلى ملف المريض الجديد (لبدء علاج مثلاً)
+            if ($_SESSION['user_role'] === 'doctor') {
+                $_SESSION['patient_profile_success'] = "تم إضافة المريض بنجاح";
+                header('Location: ../doctor/patient_profile.php?id=' . (int)$patient_id);
+                exit;
+            }
+
             $success_message = "تم إضافة المريض بنجاح";
             $action = ''; // إخفاء النموذج
         }
@@ -246,6 +254,9 @@ $pageTitle = 'إدارة المرضى';
 $pageIcon = 'fas fa-users';
 $pageSubtitle = 'إجمالي المرضى: ' . number_format($total_patients ?? 0);
 $currentPage = 'patients';
+
+// إغلاق نموذج الإضافة: الطبيب يعود إلى قائمة مرضاه
+$form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php' : '?';
 ?>
 
 <!DOCTYPE html>
@@ -266,7 +277,7 @@ $currentPage = 'patients';
 </head>
 <body class="bg-gray-50">
 
-<?php include 'includes/nurse_header.php'; ?>
+<?php include 'includes/role_header.php'; ?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
@@ -383,7 +394,7 @@ $currentPage = 'patients';
                         <i class="fas fa-user-plus text-green-600 ml-2"></i>
                         إضافة مريض جديد
                     </h3>
-                    <a href="?" class="text-gray-400 hover:text-gray-600">
+                    <a href="<?= $form_close_url ?>" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times text-2xl"></i>
                     </a>
                 </div>
@@ -487,7 +498,7 @@ $currentPage = 'patients';
                             <i class="fas fa-save ml-2"></i>
                             إضافة المريض
                         </button>
-                        <a href="?" 
+                        <a href="<?= $form_close_url ?>" 
                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 px-4 rounded-lg transition duration-200 text-center">
                             إلغاء
                         </a>
