@@ -10,7 +10,8 @@ $pageSubtitle = $pageSubtitle ?? 'نظام إدارة العيادة';
 $currentPage = $currentPage ?? '';
 
 // Get user information
-$doctor_name = $_SESSION['user_name'] ?? 'الطبيب';
+// login.php يحفظ الاسم في full_name؛ "د." تُضاف في العرض فتُحذف إن كانت ضمن الاسم المخزَّن
+$doctor_name = preg_replace('/^د\.\s*/u', '', $_SESSION['user_name'] ?? $_SESSION['full_name'] ?? '') ?: 'الطبيب';
 $doctor_id = $_SESSION['user_id'] ?? 0;
 
 // الترويسة تُعرض أيضاً في صفحات السكرتاريا (nurse/) المشتركة مع الطبيب،

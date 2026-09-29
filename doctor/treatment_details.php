@@ -32,10 +32,10 @@ try {
         LEFT JOIN appointments a ON t.appointment_id = a.id
         LEFT JOIN users d ON t.doctor_id = d.id
         LEFT JOIN payments pay ON t.id = pay.treatment_id
-        WHERE t.id = ? AND t.doctor_id = ?
+        WHERE t.id = ?
         GROUP BY t.id
     ");
-    $stmt->execute([$treatment_id, $doctor_id]);
+    $stmt->execute([$treatment_id]);
     $treatment = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$treatment) {

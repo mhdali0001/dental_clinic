@@ -191,7 +191,8 @@ function handlePutRequest() {
         throw new Exception('العلاج غير موجود');
     }
     
-    if ($treatment['doctor_id'] != $_SESSION['user_id']) {
+    // العلاجات مشتركة بين الأطباء: أي طبيب يعدّل؛ الحذف يبقى لصاحب العلاج
+    if (($_SESSION['user_role'] ?? '') !== 'doctor') {
         throw new Exception('غير مسموح لك بتعديل هذا العلاج');
     }
     

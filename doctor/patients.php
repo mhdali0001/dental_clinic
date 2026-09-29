@@ -22,13 +22,10 @@ $per_page = ($view === 'table') ? 15 : 12;
 $offset = ($page - 1) * $per_page;
 
 // بناء الاستعلام المحسن
+// ملفات المرضى مشتركة بين جميع الأطباء: تظهر كل ملفات المرضى النشطة
 $where_conditions = ["p.status = 'active'"];
 $join_conditions = [];
 $params = [];
-
-// إضافة شرط الطبيب للمرضى الذين عالجهم
-$where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.doctor_id = ?)";
-$params[] = $doctor_id;
 
 // البحث المطور
 if ($search) {
@@ -41,19 +38,15 @@ if ($search) {
 
 // الفلاتر المطورة
 if ($filter === 'recent') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.doctor_id = ? AND t.treatment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY))";
-    $params[] = $doctor_id;
+    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.treatment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY))";
 } elseif ($filter === 'followup') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.doctor_id = ? AND t.next_appointment_date IS NOT NULL AND t.next_appointment_date >= CURDATE())";
-    $params[] = $doctor_id;
+    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.next_appointment_date IS NOT NULL AND t.next_appointment_date >= CURDATE())";
 } elseif ($filter === 'unpaid') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.doctor_id = ? AND t.payment_status != 'paid' AND t.cost > 0)";
-    $params[] = $doctor_id;
+    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.payment_status != 'paid' AND t.cost > 0)";
 } elseif ($filter === 'chronic') {
     $where_conditions[] = "p.medical_history IS NOT NULL AND p.medical_history != ''";
 } elseif ($filter === 'high_value') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.doctor_id = ? AND t.cost > 1000)";
-    $params[] = $doctor_id;
+    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.cost > 1000)";
 }
 
 $where_clause = implode(' AND ', $where_conditions);
@@ -84,22 +77,21 @@ try {
                COUNT(t.id) as treatment_count,
                MAX(t.treatment_date) as last_treatment_date,
                COALESCE(SUM(t.cost), 0) as total_spent,
-               COALESCE(SUM(pay.amount), 0) as total_paid,
-               (COALESCE(SUM(t.cost), 0) - COALESCE(SUM(pay.amount), 0)) as outstanding_balance,
+               -- كل دفعات المريض (بما فيها الدفعات العامة)، دون تكرار التكلفة لكل دفعة
+               (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.patient_id = p.id) as total_paid,
+               (COALESCE(SUM(t.cost), 0) - (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.patient_id = p.id)) as outstanding_balance,
                GROUP_CONCAT(DISTINCT t.treatment_type ORDER BY t.treatment_date DESC) as recent_treatments,
                (SELECT COUNT(*) FROM appointments a WHERE a.patient_id = p.id AND a.appointment_date >= CURDATE()) as upcoming_appointments,
                (SELECT MIN(next_appointment_date) FROM treatments t2 WHERE t2.patient_id = p.id AND t2.next_appointment_date >= CURDATE()) as next_followup
         FROM patients p
-        LEFT JOIN treatments t ON p.id = t.patient_id AND t.doctor_id = ?
-        LEFT JOIN payments pay ON t.id = pay.treatment_id
+        LEFT JOIN treatments t ON p.id = t.patient_id
         WHERE $where_clause
         GROUP BY p.id
         $order_clause
         LIMIT $per_page OFFSET $offset
     ");
 
-    $all_params = array_merge([$doctor_id], $params);
-    $stmt->execute($all_params);
+    $stmt->execute($params);
     $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $total_pages = ceil($total_patients / $per_page);
@@ -114,14 +106,13 @@ try {
             COUNT(DISTINCT CASE WHEN p.medical_history IS NOT NULL AND p.medical_history != '' THEN p.id END) as chronic_patients,
             AVG(p.age) as avg_age,
             SUM(t.cost) as total_revenue,
-            SUM(pay.amount) as total_collected
+            (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay
+             JOIN patients pp ON pp.id = pay.patient_id WHERE pp.status = 'active') as total_collected
         FROM patients p
-        LEFT JOIN treatments t ON p.id = t.patient_id AND t.doctor_id = ?
-        LEFT JOIN payments pay ON t.id = pay.treatment_id
+        LEFT JOIN treatments t ON p.id = t.patient_id
         WHERE p.status = 'active'
-        AND EXISTS (SELECT 1 FROM treatments t2 WHERE t2.patient_id = p.id AND t2.doctor_id = ?)
     ");
-    $stats_stmt->execute([$doctor_id, $doctor_id]);
+    $stats_stmt->execute();
     $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {

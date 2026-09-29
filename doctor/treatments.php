@@ -59,9 +59,9 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'update_stages') {
         $stmt = $pdo->prepare("
             UPDATE treatments
             SET treatment_stages = ?, updated_at = NOW()
-            WHERE id = ? AND doctor_id = ?
+            WHERE id = ?
         ");
-        $result = $stmt->execute([$treatment_stages_data, $treatment_id, $doctor_id]);
+        $result = $stmt->execute([$treatment_stages_data, $treatment_id]);
 
         if ($result) {
             echo json_encode(['status' => 'success', 'message' => 'تم تحديث مراحل العلاج بنجاح']);
@@ -114,10 +114,10 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
             $update_parts[] = "updated_at = NOW()";
         }
 
+        // العلاجات مشتركة بين الأطباء (يُسجَّل المنفِّذ في activity_log)
         $params[] = $treatment_id;
-        $params[] = $doctor_id;
 
-        $sql = "UPDATE treatments SET " . implode(', ', $update_parts) . " WHERE id = ? AND doctor_id = ?";
+        $sql = "UPDATE treatments SET " . implode(', ', $update_parts) . " WHERE id = ?";
         $stmt = $pdo->prepare($sql);
 
         $result = $stmt->execute($params);
@@ -203,7 +203,7 @@ if ($_POST && $action === 'edit' && isset($_GET['id'])) {
             UPDATE treatments SET
                 treatment_type = ?, symptoms = ?, diagnosis = ?, treatment_details = ?,
                 medications = ?, cost = ?, next_appointment_date = ?, notes = ?, updated_at = NOW()
-            WHERE id = ? AND doctor_id = ?
+            WHERE id = ?
         ");
 
         $result = $stmt->execute([
@@ -215,8 +215,7 @@ if ($_POST && $action === 'edit' && isset($_GET['id'])) {
             $_POST['cost'] ?? null,
             $_POST['next_appointment_date'] ?? null,
             $_POST['notes'] ?? '',
-            $_GET['id'],
-            $doctor_id
+            $_GET['id']
         ]);
 
         if ($result) {
@@ -242,8 +241,18 @@ $per_page = 15;
 $offset = ($page - 1) * $per_page;
 
 // بناء الاستعلام
-$where_conditions = ["t.doctor_id = ?"];
-$params = [$doctor_id];
+// العلاجات مشتركة بين الأطباء: تُعرض علاجات الجميع، مع خيار "علاجاتي فقط" (يُحفظ في الجلسة)
+if (isset($_GET['mine'])) {
+    $_SESSION['treatments_mine_only'] = $_GET['mine'] === '1';
+}
+$mine_only = $_SESSION['treatments_mine_only'] ?? false;
+
+$where_conditions = ["1 = 1"];
+$params = [];
+if ($mine_only) {
+    $where_conditions[] = "t.doctor_id = ?";
+    $params[] = $doctor_id;
+}
 
 if ($search) {
     $where_conditions[] = "(p.name LIKE ? OR t.diagnosis LIKE ? OR t.treatment_type LIKE ?)";
@@ -289,6 +298,7 @@ try {
         SELECT t.*, p.name as patient_name, p.phone, p.age, p.gender,
                p.medical_history, p.allergies,
                a.appointment_time,
+               u.full_name as doctor_name,
                COALESCE(SUM(pay.amount), 0) as total_paid,
                CASE
                    WHEN (t.status = 'completed' OR t.completed_at IS NOT NULL OR (t.completion_notes IS NOT NULL AND t.completion_notes != ''))
@@ -301,6 +311,7 @@ try {
         FROM treatments t
         JOIN patients p ON t.patient_id = p.id
         LEFT JOIN appointments a ON t.appointment_id = a.id
+        LEFT JOIN users u ON t.doctor_id = u.id
         LEFT JOIN payments pay ON t.id = pay.treatment_id
         WHERE $where_clause
         GROUP BY t.id
@@ -319,40 +330,42 @@ try {
     $total_pages = 0;
 }
 
-// إحصائيات العلاجات
+// إحصائيات العلاجات (بنفس نطاق القائمة: الكل أو علاجاتي فقط)
+$scope_sql = $mine_only ? 'doctor_id = ? AND ' : '';
+$scope_params = $mine_only ? [$doctor_id] : [];
 try {
     // العلاجات هذا الأسبوع
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM treatments 
-        WHERE doctor_id = ? AND treatment_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        WHERE {$scope_sql}treatment_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
     ");
-    $stmt->execute([$doctor_id]);
+    $stmt->execute($scope_params);
     $this_week_count = $stmt->fetchColumn();
     
     // العلاجات غير المدفوعة
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM treatments 
-        WHERE doctor_id = ? AND payment_status = 'unpaid' AND cost > 0
+        WHERE {$scope_sql}payment_status = 'unpaid' AND cost > 0
     ");
-    $stmt->execute([$doctor_id]);
+    $stmt->execute($scope_params);
     $unpaid_count = $stmt->fetchColumn();
     
     // المواعيد المجدولة للمتابعة
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM treatments
-        WHERE doctor_id = ? AND next_appointment_date IS NOT NULL
+        WHERE {$scope_sql}next_appointment_date IS NOT NULL
         AND next_appointment_date >= CURDATE()
     ");
-    $stmt->execute([$doctor_id]);
+    $stmt->execute($scope_params);
     $followup_count = $stmt->fetchColumn();
 
     // العلاجات المكتملة (متوافق مع الجداول القديمة)
     try {
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM treatments
-            WHERE doctor_id = ? AND status = 'completed'
+            WHERE {$scope_sql}status = 'completed'
         ");
-        $stmt->execute([$doctor_id]);
+        $stmt->execute($scope_params);
         $completed_count = $stmt->fetchColumn();
     } catch (PDOException $e) {
         // إذا لم يتم إضافة عمود الحالة بعد
@@ -396,9 +409,9 @@ if ($action === 'edit' && isset($_GET['id'])) {
             SELECT t.*, p.name as patient_name, p.phone
             FROM treatments t
             JOIN patients p ON t.patient_id = p.id
-            WHERE t.id = ? AND t.doctor_id = ?
+            WHERE t.id = ?
         ");
-        $stmt->execute([$_GET['id'], $doctor_id]);
+        $stmt->execute([$_GET['id']]);
         $treatment_to_edit = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$treatment_to_edit) {
@@ -427,9 +440,9 @@ if ($action === 'complete' && isset($_GET['id'])) {
                    END as treatment_status
             FROM treatments t
             JOIN patients p ON t.patient_id = p.id
-            WHERE t.id = ? AND t.doctor_id = ?
+            WHERE t.id = ?
         ");
-        $stmt->execute([$_GET['id'], $doctor_id]);
+        $stmt->execute([$_GET['id']]);
         $treatment_to_complete = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$treatment_to_complete) {
@@ -474,10 +487,10 @@ if ($action === 'complete' && isset($_GET['id'])) {
                             $update_stages_stmt = $pdo->prepare("
                                 UPDATE treatments
                                 SET treatment_stages = ?
-                                WHERE id = ? AND doctor_id = ?
+                                WHERE id = ?
                             ");
                             $stages_json = json_encode($formatted_stages, JSON_UNESCAPED_UNICODE);
-                            $update_stages_stmt->execute([$stages_json, $treatment_to_complete['id'], $doctor_id]);
+                            $update_stages_stmt->execute([$stages_json, $treatment_to_complete['id']]);
 
                             // Update the local treatment data
                             $treatment_to_complete['treatment_stages'] = $stages_json;
@@ -677,6 +690,19 @@ $currentPage = 'treatments';
                 
 <!-- Action Buttons - محدث -->
 <div class="flex gap-4">
+    <?php $scope_query = ($filter ? '&filter=' . urlencode($filter) : '') . ($search ? '&search=' . urlencode($search) : ''); ?>
+    <div class="flex rounded-lg border border-gray-300 overflow-hidden text-sm" title="العلاجات مشتركة بين الأطباء">
+        <a href="?mine=0<?= $scope_query ?>"
+           class="<?= !$mine_only ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 flex items-center transition">
+            <i class="fas fa-users ml-1"></i>
+            كل الأطباء
+        </a>
+        <a href="?mine=1<?= $scope_query ?>"
+           class="<?= $mine_only ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 flex items-center transition border-r border-gray-300">
+            <i class="fas fa-user-md ml-1"></i>
+            علاجاتي فقط
+        </a>
+    </div>
     <a href="treatment_new.php<?= $preselected_appointment ? '?appointment_id=' . $preselected_appointment : '' ?><?= $preselected_patient ? ($preselected_appointment ? '&' : '?') . 'patient_id=' . $preselected_patient : '' ?>" 
        class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition flex items-center">
         <i class="fas fa-plus ml-2"></i>
@@ -1088,7 +1114,13 @@ $currentPage = 'treatments';
                                                     <span class="ml-4"><?= date('H:i', strtotime($treatment['appointment_time'])) ?></span>
                                                 <?php endif; ?>
                                                 <i class="fas fa-user ml-1"></i>
-                                                <span><?= $treatment['age'] ?> سنة - <?= $treatment['gender'] === 'male' ? 'ذكر' : 'أنثى' ?></span>
+                                                <span class="ml-4"><?= $treatment['age'] ?> سنة - <?= $treatment['gender'] === 'male' ? 'ذكر' : 'أنثى' ?></span>
+                                                <?php if (!empty($treatment['doctor_name'])): ?>
+                                                    <i class="fas fa-user-md ml-1 <?= $treatment['doctor_id'] == $doctor_id ? 'text-blue-600' : '' ?>"></i>
+                                                    <span class="<?= $treatment['doctor_id'] == $doctor_id ? 'text-blue-600 font-medium' : '' ?>">
+                                                        <?= htmlspecialchars($treatment['doctor_name']) ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>

@@ -135,10 +135,10 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'save_progress') {
             $update_columns[] = "updated_at = NOW()";
         }
 
+        // العلاجات مشتركة بين الأطباء: أي طبيب يتابع علاج زميله (يُسجَّل المنفِّذ في activity_log)
         $update_params[] = $treatment_id;
-        $update_params[] = $doctor_id;
 
-        $sql = "UPDATE treatments SET " . implode(', ', $update_columns) . " WHERE id = ? AND doctor_id = ?";
+        $sql = "UPDATE treatments SET " . implode(', ', $update_columns) . " WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $result = $stmt->execute($update_params);
 
@@ -270,10 +270,10 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
             $update_columns[] = "updated_at = NOW()";
         }
 
+        // العلاجات مشتركة بين الأطباء: أي طبيب يتابع علاج زميله (يُسجَّل المنفِّذ في activity_log)
         $update_params[] = $treatment_id;
-        $update_params[] = $doctor_id;
 
-        $sql = "UPDATE treatments SET " . implode(', ', $update_columns) . " WHERE id = ? AND doctor_id = ?";
+        $sql = "UPDATE treatments SET " . implode(', ', $update_columns) . " WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $result = $stmt->execute($update_params);
 
@@ -293,8 +293,8 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'complete_treatmen
 
             // "إنهاء وبدء علاج جديد": الانتقال مباشرة لعلاج جديد لنفس المريض
             if (($_POST['after_complete'] ?? '') === 'new_treatment') {
-                $stmt = $pdo->prepare("SELECT patient_id FROM treatments WHERE id = ? AND doctor_id = ?");
-                $stmt->execute([$treatment_id, $doctor_id]);
+                $stmt = $pdo->prepare("SELECT patient_id FROM treatments WHERE id = ?");
+                $stmt->execute([$treatment_id]);
                 $completed_patient_id = $stmt->fetchColumn();
                 if ($completed_patient_id) {
                     header("Location: treatment_new.php?patient_id=" . (int)$completed_patient_id . "&completed=1");
@@ -494,11 +494,11 @@ if (isset($_GET['patient_id'])) {
     try {
         $stmt = $pdo->prepare("
             SELECT * FROM treatments 
-            WHERE patient_id = ? AND doctor_id = ?
-            ORDER BY treatment_date DESC 
+            WHERE patient_id = ?
+            ORDER BY treatment_date DESC
             LIMIT 5
         ");
-        $stmt->execute([$_GET['patient_id'], $doctor_id]);
+        $stmt->execute([$_GET['patient_id']]);
         $patient_treatments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $patient_treatments = [];
@@ -519,9 +519,9 @@ if ($view_mode && $view_treatment_id) {
             SELECT t.*, p.name as patient_name, p.phone as patient_phone, p.age as patient_age
             FROM treatments t
             JOIN patients p ON t.patient_id = p.id
-            WHERE t.id = ? AND t.doctor_id = ?
+            WHERE t.id = ?
         ");
-        $stmt->execute([$view_treatment_id, $doctor_id]);
+        $stmt->execute([$view_treatment_id]);
         $view_treatment = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$view_treatment) {
@@ -695,13 +695,6 @@ try {
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .fade-in { animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Patient search: the native select stays in the form (for value + required validation) but is invisible */
-        .patient-native-select {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0; pointer-events: none;
-        }
-        .patient-option.active { background-color: #eff6ff; }
 
         /* Custom Dental Chart Styles */
         .dental-chart-custom {
@@ -1068,21 +1061,9 @@ try {
                     <!-- Patient Selection -->
                     <div>
                         <label for="patientSearchInput" class="block text-gray-700 font-semibold mb-2">المريض *</label>
-                        <div class="relative" id="patientSearchWrapper">
-                            <div class="relative">
-                                <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-                                <input type="text" id="patientSearchInput" autocomplete="off"
-                                       placeholder="ابحث باسم المريض أو رقم الهاتف..."
-                                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="patientSearchDropdown"
-                                       class="w-full p-3 pr-10 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <button type="button" id="patientSearchClear" title="مسح اختيار المريض"
-                                        class="hidden absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <!-- القائمة الأصلية تبقى مصدر القيمة المرسلة، ومخفية خلف حقل البحث -->
-                            <select name="patient_id" id="patientSelect" required tabindex="-1"
-                                    class="patient-native-select"
+                        <!-- حقل البحث يُبنى فوق هذه القائمة بواسطة assets/js/patient-search.js -->
+                            <select name="patient_id" id="patientSelect" required
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                     onchange="loadPatientData()">
                                 <option value="">اختر مريض...</option>
                                 <?php foreach ($patients_list as $patient): ?>
@@ -1098,9 +1079,6 @@ try {
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <ul id="patientSearchDropdown" role="listbox"
-                                class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto"></ul>
-                        </div>
                     </div>
                 </div>
 
@@ -1440,6 +1418,7 @@ try {
 
     </div>
 
+    <script src="../assets/js/patient-search.js"></script>
     <script>
         let dentalChart;
         let treatmentStagesManager;
@@ -1814,9 +1793,10 @@ try {
         let customDentalData = null;
         let selectedTeeth = new Set();
         let dentalChartResizeBound = false;
+        let patientSearch = null; // assets/js/patient-search.js
         
         document.addEventListener('DOMContentLoaded', function() {
-            initPatientSearch();
+            patientSearch = PatientSearch.attach(document.getElementById('patientSelect'), { inputId: 'patientSearchInput' });
 
             <?php if ($view_mode): ?>
             // في وضع إكمال العلاج، تحميل بيانات العلاج وإظهار النموذج
@@ -2342,191 +2322,11 @@ try {
             }
         }
         
-        // ===== Patient search (combobox over the hidden #patientSelect) =====
-        function normalizeArabicSearch(text) {
-            return (text || '')
-                .toString()
-                .toLowerCase()
-                .replace(/[ً-ْـ]/g, '') // التشكيل والتطويل
-                .replace(/[أإآٱ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/ى/g, 'ي')
-                .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        function getPatientOptionLabel(option) {
-            const phone = option.dataset.phone ? ' - ' + option.dataset.phone : '';
-            return (option.dataset.name || option.textContent.trim()) + phone;
-        }
-
-        // Reflect the select's current value in the search input
-        function syncPatientSearchInput() {
-            const patientSelect = document.getElementById('patientSelect');
-            const input = document.getElementById('patientSearchInput');
-            const clearBtn = document.getElementById('patientSearchClear');
-            if (!patientSelect || !input) return;
-
-            const selectedOption = patientSelect.value ? patientSelect.options[patientSelect.selectedIndex] : null;
-            input.value = selectedOption ? getPatientOptionLabel(selectedOption) : '';
-            if (clearBtn) clearBtn.classList.toggle('hidden', !selectedOption);
-        }
-
-        function initPatientSearch() {
-            const patientSelect = document.getElementById('patientSelect');
-            const input = document.getElementById('patientSearchInput');
-            const dropdown = document.getElementById('patientSearchDropdown');
-            const clearBtn = document.getElementById('patientSearchClear');
-            if (!patientSelect || !input || !dropdown) return;
-
-            const MAX_RESULTS = 50;
-            const patients = Array.from(patientSelect.options)
-                .filter(option => option.value)
-                .map(option => ({
-                    id: option.value,
-                    name: option.dataset.name || option.textContent.trim(),
-                    phone: option.dataset.phone || '',
-                    age: option.dataset.age || '',
-                    haystack: normalizeArabicSearch((option.dataset.name || '') + ' ' + (option.dataset.phone || ''))
-                }));
-
-            let results = [];
-            let activeIndex = -1;
-
-            function openDropdown() {
-                dropdown.classList.remove('hidden');
-                input.setAttribute('aria-expanded', 'true');
-            }
-
-            function closeDropdown() {
-                dropdown.classList.add('hidden');
-                input.setAttribute('aria-expanded', 'false');
-                activeIndex = -1;
-            }
-
-            function setActive(index) {
-                const items = dropdown.querySelectorAll('.patient-option');
-                items.forEach(item => item.classList.remove('active'));
-                activeIndex = index;
-                if (items[index]) {
-                    items[index].classList.add('active');
-                    items[index].scrollIntoView({ block: 'nearest' });
-                }
-            }
-
-            function render(term) {
-                const words = normalizeArabicSearch(term).split(' ').filter(Boolean);
-                const matches = words.length
-                    ? patients.filter(p => words.every(w => p.haystack.includes(w)))
-                    : patients;
-                results = matches.slice(0, MAX_RESULTS);
-
-                dropdown.innerHTML = '';
-                if (results.length === 0) {
-                    const empty = document.createElement('li');
-                    empty.className = 'px-4 py-3 text-sm text-gray-500 text-center';
-                    empty.textContent = 'لا يوجد مريض مطابق للبحث';
-                    dropdown.appendChild(empty);
-                } else {
-                    results.forEach((patient, index) => {
-                        const li = document.createElement('li');
-                        li.className = 'patient-option px-4 py-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100';
-                        li.setAttribute('role', 'option');
-                        if (patient.id === patientSelect.value) li.setAttribute('aria-selected', 'true');
-
-                        const nameEl = document.createElement('div');
-                        nameEl.className = 'font-semibold text-gray-800';
-                        nameEl.textContent = patient.name;
-
-                        const metaEl = document.createElement('div');
-                        metaEl.className = 'text-sm text-gray-500';
-                        const meta = [];
-                        if (patient.phone) meta.push(patient.phone);
-                        if (patient.age) meta.push(patient.age + ' سنة');
-                        metaEl.textContent = meta.join(' · ');
-
-                        li.appendChild(nameEl);
-                        li.appendChild(metaEl);
-                        // mousedown (not click) so the input's blur doesn't close the list first
-                        li.addEventListener('mousedown', e => {
-                            e.preventDefault();
-                            choose(index);
-                        });
-                        li.addEventListener('mousemove', () => {
-                            if (activeIndex !== index) setActive(index);
-                        });
-                        dropdown.appendChild(li);
-                    });
-
-                    if (matches.length > MAX_RESULTS) {
-                        const more = document.createElement('li');
-                        more.className = 'px-4 py-2 text-xs text-gray-400 text-center';
-                        more.textContent = 'يوجد ' + (matches.length - MAX_RESULTS) + ' نتيجة أخرى، اكتب المزيد لتضييق البحث';
-                        dropdown.appendChild(more);
-                    }
-                }
-
-                openDropdown();
-                if (results.length) setActive(words.length ? 0 : -1);
-            }
-
-            function choose(index) {
-                const patient = results[index];
-                if (!patient) return;
-                patientSelect.value = patient.id;
-                closeDropdown();
-                loadPatientData();
-            }
-
-            input.addEventListener('focus', () => {
-                input.select();
-                render(patientSelect.value ? '' : input.value);
-            });
-
-            input.addEventListener('input', () => render(input.value));
-
-            input.addEventListener('keydown', e => {
-                const isOpen = !dropdown.classList.contains('hidden');
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (!isOpen) render(input.value);
-                    else if (results.length) setActive(Math.min(activeIndex + 1, results.length - 1));
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (isOpen && results.length) setActive(Math.max(activeIndex - 1, 0));
-                } else if (e.key === 'Enter') {
-                    // Never submit the treatment form from the search box
-                    e.preventDefault();
-                    if (isOpen) choose(activeIndex >= 0 ? activeIndex : (results.length === 1 ? 0 : -1));
-                } else if (e.key === 'Escape') {
-                    closeDropdown();
-                    syncPatientSearchInput();
-                }
-            });
-
-            // Leaving the field without picking restores the current selection's label
-            input.addEventListener('blur', () => {
-                closeDropdown();
-                syncPatientSearchInput();
-            });
-
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
-                    patientSelect.value = '';
-                    loadPatientData();
-                    input.focus();
-                });
-            }
-
-            syncPatientSearchInput();
-        }
-
         function loadPatientData() {
             const patientSelect = document.getElementById('patientSelect');
             const medicalAlerts = document.getElementById('medicalAlerts');
 
-            syncPatientSearchInput();
+            patientSearch?.sync();
 
             if (!patientSelect.value) {
                 medicalAlerts.style.display = 'none';

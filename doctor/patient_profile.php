@@ -21,20 +21,20 @@ if (!$patient_id) {
 // جلب بيانات المريض
 try {
     $stmt = $pdo->prepare("
-        SELECT p.*, 
-               COUNT(DISTINCT t.id) as treatment_count,
-               MAX(t.treatment_date) as last_treatment_date,
-               COALESCE(SUM(t.cost), 0) as total_cost,
-               COALESCE(SUM(pay.amount), 0) as total_paid,
-               (COALESCE(SUM(t.cost), 0) - COALESCE(SUM(pay.amount), 0)) as remaining_balance
+        SELECT p.*,
+               (SELECT COUNT(*) FROM treatments t WHERE t.patient_id = p.id) as treatment_count,
+               (SELECT MAX(t.treatment_date) FROM treatments t WHERE t.patient_id = p.id) as last_treatment_date,
+               (SELECT COALESCE(SUM(t.cost), 0) FROM treatments t WHERE t.patient_id = p.id) as total_cost,
+               -- كل دفعات المريض، بما فيها الدفعات العامة غير المرتبطة بعلاج
+               (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.patient_id = p.id) as total_paid
         FROM patients p
-        LEFT JOIN treatments t ON p.id = t.patient_id AND t.doctor_id = ?
-        LEFT JOIN payments pay ON t.id = pay.treatment_id
         WHERE p.id = ?
-        GROUP BY p.id
     ");
-    $stmt->execute([$doctor_id, $patient_id]);
+    $stmt->execute([$patient_id]);
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($patient) {
+        $patient['remaining_balance'] = $patient['total_cost'] - $patient['total_paid'];
+    }
     
     if (!$patient) {
         header('Location: patients.php');

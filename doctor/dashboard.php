@@ -73,12 +73,12 @@ try {
                t.id as treatment_id, t.diagnosis, t.treatment_details
         FROM appointments a 
         JOIN patients p ON a.patient_id = p.id 
-        LEFT JOIN treatments t ON a.id = t.appointment_id AND t.doctor_id = ?
-        WHERE DATE(a.appointment_date) = ? 
+        LEFT JOIN treatments t ON a.id = t.appointment_id
+        WHERE DATE(a.appointment_date) = ?
         AND a.status IN ('scheduled', 'confirmed')
         ORDER BY COALESCE(a.appointment_time, a.appointment_date)
     ");
-    $stmt->execute([$doctor_id, $today]);
+    $stmt->execute([$today]);
     $todayAppointmentsList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // المرضى في قائمة الانتظار (with fallback if table doesn't exist)
@@ -192,7 +192,7 @@ try {
 // Header configuration
 $pageTitle = 'لوحة التحكم';
 $pageIcon = 'fas fa-tachometer-alt';
-$pageSubtitle = 'مرحباً د. ' . ($_SESSION['user_name'] ?? 'الطبيب');
+$pageSubtitle = 'مرحباً د. ' . (preg_replace('/^د\.\s*/u', '', $_SESSION['user_name'] ?? $_SESSION['full_name'] ?? '') ?: 'الطبيب');
 $currentPage = 'dashboard';
 ?>
 

@@ -24,12 +24,24 @@ $error_message = '';
 // إضافة دفعة جديدة
 if ($_POST && $action === 'add_payment') {
     try {
-        // كل دفعة مرتبطة بعلاج (العمود treatment_id في جدول payments إلزامي)
-        $payment_treatment_id = (int)($_POST['treatment_id'] ?? 0);
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM treatments WHERE id = ? AND patient_id = ?");
-        $stmt->execute([$payment_treatment_id, (int)($_POST['patient_id'] ?? 0)]);
-        if (!$payment_treatment_id || !$stmt->fetchColumn()) {
-            throw new InvalidArgumentException('يرجى اختيار العلاج الذي تُسجَّل عليه الدفعة');
+        $payment_patient_id = (int)($_POST['patient_id'] ?? 0);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE id = ? AND status = 'active'");
+        $stmt->execute([$payment_patient_id]);
+        if (!$stmt->fetchColumn()) {
+            throw new InvalidArgumentException('يرجى اختيار المريض');
+        }
+        if (!is_numeric($_POST['amount'] ?? '') || (float)$_POST['amount'] <= 0) {
+            throw new InvalidArgumentException('المبلغ يجب أن يكون أكبر من صفر');
+        }
+
+        // العلاج اختياري: بدونه تُسجَّل "دفعة عامة" على حساب المريض
+        $payment_treatment_id = (int)($_POST['treatment_id'] ?? 0) ?: null;
+        if ($payment_treatment_id) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM treatments WHERE id = ? AND patient_id = ?");
+            $stmt->execute([$payment_treatment_id, $payment_patient_id]);
+            if (!$stmt->fetchColumn()) {
+                throw new InvalidArgumentException('العلاج المختار لا يخص هذا المريض');
+            }
         }
 
         $stmt = $pdo->prepare("
@@ -38,7 +50,7 @@ if ($_POST && $action === 'add_payment') {
         ");
 
         $result = $stmt->execute([
-            $_POST['patient_id'],
+            $payment_patient_id,
             $payment_treatment_id,
             $_POST['amount'],
             $_POST['payment_method'],
@@ -49,8 +61,8 @@ if ($_POST && $action === 'add_payment') {
         
         if ($result) {
             // تحديث حالة الدفع للعلاج إذا تم تحديد علاج محدد
-            if (!empty($_POST['treatment_id'])) {
-                updateTreatmentPaymentStatus($_POST['treatment_id']);
+            if ($payment_treatment_id) {
+                updateTreatmentPaymentStatus($payment_treatment_id);
             }
             
             $success_message = "تم إضافة الدفعة بنجاح";
@@ -80,12 +92,15 @@ if ($search) {
     $params[] = "%$search%";
 }
 
+// إجمالي المدفوع لكل مريض (بما فيه الدفعات العامة) — الاستعلامان أدناه لا يربطان جدول الدفعات في شرط WHERE
+$patient_paid_sql = "COALESCE((SELECT SUM(pf.amount) FROM payments pf WHERE pf.patient_id = p.id), 0)";
+
 if ($filter === 'unpaid') {
-    $where_conditions[] = "balance.total_cost > balance.total_paid";
+    $where_conditions[] = "COALESCE(balance.total_cost, 0) > $patient_paid_sql";
 } elseif ($filter === 'paid') {
-    $where_conditions[] = "balance.total_cost <= balance.total_paid";
+    $where_conditions[] = "balance.total_cost > 0 AND balance.total_cost <= $patient_paid_sql";
 } elseif ($filter === 'no_treatments') {
-    $where_conditions[] = "balance.total_cost IS NULL OR balance.total_cost = 0";
+    $where_conditions[] = "(balance.total_cost IS NULL OR balance.total_cost = 0)";
 }
 
 $where_clause = implode(' AND ', $where_conditions);
@@ -347,8 +362,8 @@ try {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Patient Selection -->
                         <div class="md:col-span-2">
-                            <label class="block text-gray-700 font-semibold mb-2">المريض *</label>
-                            <select name="patient_id" required 
+                            <label for="paymentPatientSearch" class="block text-gray-700 font-semibold mb-2">المريض *</label>
+                            <select name="patient_id" id="paymentPatientSelect" required
                                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     onchange="loadPatientTreatments(this.value)">
                                 <option value="">اختر مريض...</option>
@@ -358,7 +373,10 @@ try {
                                     $patients_list = $patients_stmt->fetchAll(PDO::FETCH_ASSOC);
                                     $selected_patient_id = $_GET['patient_id'] ?? '';
                                     foreach ($patients_list as $patient): ?>
-                                        <option value="<?= $patient['id'] ?>" <?= $selected_patient_id == $patient['id'] ? 'selected' : '' ?>>
+                                        <option value="<?= $patient['id'] ?>"
+                                                data-name="<?= htmlspecialchars($patient['name']) ?>"
+                                                data-phone="<?= htmlspecialchars($patient['phone'] ?? '') ?>"
+                                                <?= $selected_patient_id == $patient['id'] ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($patient['name']) ?> - <?= $patient['phone'] ?>
                                         </option>
                                     <?php endforeach;
@@ -371,11 +389,12 @@ try {
                         
                         <!-- Treatment Selection -->
                         <div class="md:col-span-2">
-                            <label class="block text-gray-700 font-semibold mb-2">العلاج *</label>
-                            <select name="treatment_id" id="treatmentSelect" required
+                            <label class="block text-gray-700 font-semibold mb-2">العلاج (اختياري)</label>
+                            <select name="treatment_id" id="treatmentSelect"
                                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="">اختر المريض أولاً...</option>
+                                <option value="">دفعة عامة (غير مرتبطة بعلاج محدد)</option>
                             </select>
+                            <p class="text-xs text-gray-500 mt-1">اختر العلاج لتُخصم الدفعة منه، أو اتركها دفعة عامة على حساب المريض</p>
                         </div>
                         
                         <!-- Amount -->
@@ -626,6 +645,7 @@ try {
         <?php endif; ?>
     </div>
 
+    <script src="../assets/js/patient-search.js"></script>
     <script>
         // Auto-submit search form on input
         const searchInput = document.querySelector('input[name="search"]');
@@ -644,49 +664,51 @@ try {
         async function loadPatientTreatments(patientId) {
             const treatmentSelect = document.getElementById('treatmentSelect');
             
-            if (!patientId) {
-                treatmentSelect.innerHTML = '<option value="">اختر المريض أولاً...</option>';
-                return;
-            }
+            const generalOption = '<option value="">دفعة عامة (غير مرتبطة بعلاج محدد)</option>';
+            treatmentSelect.innerHTML = generalOption;
+            if (!patientId) return;
+
+            // تجاهل ردّ قديم إذا غُيّر المريض قبل وصوله
+            loadPatientTreatments.latest = patientId;
 
             try {
-                const response = await fetch(`../api/treatments.php?patient_id=${patientId}`);
+                const response = await fetch(`../api/treatments.php?patient_id=${encodeURIComponent(patientId)}`);
                 const data = await response.json();
+                if (loadPatientTreatments.latest !== patientId) return;
 
                 const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
                 let options = '';
-                let billableIds = [];
+                const treatmentIds = [];
+                const unpaidIds = [];
 
-                if (data.success && data.treatments) {
-                    data.treatments.forEach(treatment => {
-                        const cost = parseFloat(treatment.cost || 0);
-                        const paid = parseFloat(treatment.total_paid || 0);
-                        const remaining = cost - paid;
+                (data.success && data.treatments ? data.treatments : []).forEach(treatment => {
+                    const cost = parseFloat(treatment.cost || 0);
+                    const paid = parseFloat(treatment.total_paid || 0);
+                    const remaining = cost - paid;
+                    treatmentIds.push(String(treatment.id));
+                    if (remaining > 0) unpaidIds.push(String(treatment.id));
 
-                        if (cost > 0) {
-                            billableIds.push(String(treatment.id));
-                            options += `<option value="${treatment.id}">
-                                ${escapeHtml(treatment.treatment_details || treatment.treatment_type)} - ${escapeHtml(treatment.treatment_date)}
-                                (التكلفة: ${Math.round(cost)} ليرة سورية، المتبقي: ${Math.round(remaining)} ليرة سورية)
-                            </option>`;
-                        }
-                    });
-                }
+                    const costText = cost > 0
+                        ? `التكلفة: ${Math.round(cost)} ليرة سورية، المتبقي: ${Math.round(remaining)} ليرة سورية`
+                        : 'التكلفة غير محددة';
+                    options += `<option value="${treatment.id}">
+                        ${escapeHtml(treatment.treatment_details || treatment.treatment_type)} - ${escapeHtml(treatment.treatment_date)} (${costText})
+                    </option>`;
+                });
 
-                treatmentSelect.innerHTML = billableIds.length
-                    ? '<option value="">اختر العلاج...</option>' + options
-                    : '<option value="">لا توجد علاجات بتكلفة لهذا المريض</option>';
+                treatmentSelect.innerHTML = generalOption + options;
 
-                // العلاج المحدد في الرابط (زر "دفعة" من صفحات الطبيب)، أو العلاج الوحيد إن وُجد
-                if (billableIds.includes(preselectedTreatmentId)) {
+                // العلاج المحدد في الرابط (زر "دفعة" من صفحات الطبيب)، أو العلاج الوحيد غير المسدَّد
+                if (treatmentIds.includes(preselectedTreatmentId)) {
                     treatmentSelect.value = preselectedTreatmentId;
-                } else if (billableIds.length === 1) {
-                    treatmentSelect.value = billableIds[0];
+                } else if (unpaidIds.length === 1) {
+                    treatmentSelect.value = unpaidIds[0];
                 }
 
             } catch (error) {
                 console.error('Error loading treatments:', error);
-                treatmentSelect.innerHTML = '<option value="">خطأ في تحميل العلاجات</option>';
+                // تبقى الدفعة العامة متاحة حتى لو فشل تحميل العلاجات
+                treatmentSelect.innerHTML = generalOption;
             }
         }
         
@@ -694,11 +716,10 @@ try {
         const form = document.querySelector('form[method="POST"]');
         form?.addEventListener('submit', function(e) {
             const patientId = this.querySelector('select[name="patient_id"]').value;
-            const treatmentId = this.querySelector('select[name="treatment_id"]').value;
             const amount = this.querySelector('input[name="amount"]').value;
             const paymentMethod = this.querySelector('select[name="payment_method"]').value;
 
-            if (!patientId || !treatmentId || !amount || !paymentMethod) {
+            if (!patientId || !amount || !paymentMethod) {
                 e.preventDefault();
                 alert('يرجى ملء جميع الحقول المطلوبة');
                 return;
@@ -711,14 +732,19 @@ try {
             }
         });
         
-        // Auto-focus on patient select if form is visible
-        const patientSelect = document.querySelector('select[name="patient_id"]');
+        // Patient search box over the patient select (payment form only)
+        const patientSelect = document.getElementById('paymentPatientSelect');
         if (patientSelect) {
-            patientSelect.focus();
+            const patientSearch = PatientSearch.attach(patientSelect, {
+                inputId: 'paymentPatientSearch',
+                inputClass: 'w-full p-3 pr-10 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent'
+            });
 
-            // Load treatments if a patient is pre-selected
+            // Load treatments if a patient is pre-selected, otherwise start typing right away
             if (patientSelect.value) {
                 loadPatientTreatments(patientSelect.value);
+            } else {
+                patientSearch.input.focus();
             }
         }
     </script>

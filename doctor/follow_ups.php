@@ -22,9 +22,9 @@ if ($_POST && isset($_POST['action'])) {
                 $stmt = $pdo->prepare("
                     UPDATE follow_ups
                     SET status = 'completed', completed_at = NOW()
-                    WHERE id = ? AND patient_id IN (SELECT id FROM patients WHERE doctor_id = ?)
+                    WHERE id = ?
                 ");
-                $stmt->execute([$_POST['followup_id'], $doctor_id]);
+                $stmt->execute([$_POST['followup_id']]);
                 $success_message = "تم إكمال المتابعة بنجاح";
                 break;
 
@@ -32,9 +32,9 @@ if ($_POST && isset($_POST['action'])) {
                 $stmt = $pdo->prepare("
                     UPDATE follow_ups
                     SET follow_up_date = ?, status = 'rescheduled'
-                    WHERE id = ? AND patient_id IN (SELECT id FROM patients WHERE doctor_id = ?)
+                    WHERE id = ?
                 ");
-                $stmt->execute([$_POST['new_date'], $_POST['followup_id'], $doctor_id]);
+                $stmt->execute([$_POST['new_date'], $_POST['followup_id']]);
                 $success_message = "تم إعادة جدولة المتابعة بنجاح";
                 break;
 
@@ -42,9 +42,9 @@ if ($_POST && isset($_POST['action'])) {
                 $stmt = $pdo->prepare("
                     UPDATE follow_ups
                     SET status = 'cancelled'
-                    WHERE id = ? AND patient_id IN (SELECT id FROM patients WHERE doctor_id = ?)
+                    WHERE id = ?
                 ");
-                $stmt->execute([$_POST['followup_id'], $doctor_id]);
+                $stmt->execute([$_POST['followup_id']]);
                 $success_message = "تم إلغاء المتابعة بنجاح";
                 break;
 

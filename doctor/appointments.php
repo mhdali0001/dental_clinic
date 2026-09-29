@@ -44,10 +44,10 @@ try {
             SELECT id as treatment_id, diagnosis, treatment_details, cost,
                    payment_status, next_appointment_date
             FROM treatments 
-            WHERE appointment_id = ? AND doctor_id = ?
+            WHERE appointment_id = ?
             LIMIT 1
         ");
-        $treatment_stmt->execute([$appointment['id'], $doctor_id]);
+        $treatment_stmt->execute([$appointment['id']]);
         $treatment = $treatment_stmt->fetch(PDO::FETCH_ASSOC);
         
         // دمج معلومات العلاج مع معلومات الموعد
