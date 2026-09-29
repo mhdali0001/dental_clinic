@@ -1,11 +1,19 @@
 <?php
-session_start();
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 
 // تسجيل نشاط تسجيل الخروج إذا كان المستخدم مسجل دخول
 if (isset($_SESSION['user_id'])) {
-    logActivity($_SESSION['user_id'], 'logout', 'users', $_SESSION['user_id'], 'تسجيل خروج');
+    try {
+        logActivity($_SESSION['user_id'], 'logout', 'users', $_SESSION['user_id'], 'تسجيل خروج');
+    } catch (Exception $e) {
+        // Ignore logging errors during logout
+    }
 }
 
 // مسح جميع متغيرات الجلسة

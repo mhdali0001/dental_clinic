@@ -9,6 +9,11 @@ $pageIcon = $pageIcon ?? 'fas fa-shield-alt';
 $pageSubtitle = $pageSubtitle ?? 'لوحة تحكم الإدارة';
 $currentPage = $currentPage ?? '';
 
+// Ensure session is started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Get user information
 $admin_name = $_SESSION['full_name'] ?? 'المدير العام';
 $admin_id = $_SESSION['user_id'] ?? 0;
@@ -168,10 +173,10 @@ foreach ($navItems as $key => $item) {
                 </div>
 
                 <!-- Logout -->
-                <a href="../auth/logout.php" onclick="return confirm('هل تريد تسجيل الخروج؟');" class="classic-button bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition-all duration-200 border border-red-500">
+                <button onclick="handleLogout()" class="classic-button bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition-all duration-200 border border-red-500">
                     <i class="fas fa-sign-out-alt ml-1"></i>
                     <span class="hidden sm:inline">خروج</span>
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -497,6 +502,22 @@ foreach ($navItems as $key => $item) {
 
 <!-- Enhanced JavaScript for admin header functionality -->
 <script>
+// Handle logout with confirmation
+function handleLogout() {
+    if (confirm('هل تريد تسجيل الخروج؟')) {
+        // Clear any cached data
+        if (window.sessionStorage) {
+            sessionStorage.clear();
+        }
+        if (window.localStorage) {
+            // Clear only app-specific items if needed
+        }
+
+        // Redirect to logout
+        window.location.href = '../auth/logout.php';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Enhanced notification click handler
     const notificationBtn = document.querySelector('.classic-icon-btn');

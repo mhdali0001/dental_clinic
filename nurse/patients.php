@@ -73,11 +73,14 @@ if ($_POST && $action === 'add') {
             $next_birthday_followup = $next_birthday->format('Y-m-d');
         }
 
+        // Handle optional age field
+        $age = !empty($_POST['age']) ? $_POST['age'] : null;
+
         if ($has_birth_date_column && $has_birthday_followup_column) {
             $result = $stmt->execute([
                 $_POST['name'],
                 $_POST['phone'],
-                $_POST['age'],
+                $age,
                 $_POST['gender'],
                 $date_of_birth,
                 $_POST['address'] ?? '',
@@ -92,7 +95,7 @@ if ($_POST && $action === 'add') {
             $result = $stmt->execute([
                 $_POST['name'],
                 $_POST['phone'],
-                $_POST['age'],
+                $age,
                 $_POST['gender'],
                 $date_of_birth,
                 $_POST['address'] ?? '',
@@ -106,7 +109,7 @@ if ($_POST && $action === 'add') {
             $result = $stmt->execute([
                 $_POST['name'],
                 $_POST['phone'],
-                $_POST['age'],
+                $age,
                 $_POST['gender'],
                 $_POST['address'] ?? '',
                 $_POST['email'] ?? '',
@@ -405,16 +408,16 @@ $currentPage = 'patients';
                             
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2">رقم الهاتف *</label>
-                                <input type="tel" name="phone" required pattern="05[0-9]{8}"
+                                <input type="tel" name="phone" required pattern="09[0-9]{8}"
                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       placeholder="05xxxxxxxx">
+                                       placeholder="09xxxxxxxx">
                             </div>
                             
                             <div>
-                                <label class="block text-gray-700 font-semibold mb-2">العمر *</label>
-                                <input type="number" name="age" id="ageInput" required min="1" max="150"
+                                <label class="block text-gray-700 font-semibold mb-2">العمر</label>
+                                <input type="number" name="age" id="ageInput" min="1" max="150"
                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       placeholder="العمر بالسنوات">
+                                       placeholder="العمر بالسنوات (اختياري)">
                             </div>
 
                             <div>
@@ -737,20 +740,21 @@ $currentPage = 'patients';
             const phone = this.querySelector('input[name="phone"]').value.trim();
             const age = this.querySelector('input[name="age"]').value;
             const gender = this.querySelector('select[name="gender"]').value;
-            
-            if (!name || !phone || !age || !gender) {
+
+            if (!name || !phone || !gender) {
                 e.preventDefault();
                 alert('يرجى ملء جميع الحقول المطلوبة');
                 return;
             }
-            
-            if (!/^05[0-9]{8}$/.test(phone)) {
+
+            if (!/^09[0-9]{8}$/.test(phone)) {
                 e.preventDefault();
-                alert('رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويحتوي على 10 أرقام');
+                alert('رقم الهاتف غير صحيح. يجب أن يبدأ بـ 09 ويحتوي على 10 أرقام');
                 return;
             }
-            
-            if (age < 1 || age > 150) {
+
+            // Validate age only if provided
+            if (age && (age < 1 || age > 150)) {
                 e.preventDefault();
                 alert('العمر يجب أن يكون بين 1 و 150 سنة');
                 return;
