@@ -256,7 +256,33 @@ $pageSubtitle = 'إجمالي المرضى: ' . number_format($total_patients ??
 $currentPage = 'patients';
 
 // إغلاق نموذج الإضافة: الطبيب يعود إلى قائمة مرضاه
-$form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php' : '?';
+$form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php' : 'patients.php';
+
+// صفحة إضافة مريض (بهوية EDSM مثل صفحة حجز موعد)
+if ($action === 'add') {
+    $pageTitle = 'إضافة مريض جديد';
+    $pageIcon = 'fas fa-user-plus';
+    $breadcrumbs = [
+        ['title' => 'المرضى', 'url' => $form_close_url],
+        ['title' => 'إضافة مريض جديد'],
+    ];
+
+    // رابط ملف المريض حسب الدور
+    $profile_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patient_profile.php?id=' : 'patient_details.php?id=';
+
+    try {
+        $latest_patients = $pdo->query("
+            SELECT id, name, phone, created_at, registration_date
+            FROM patients WHERE status = 'active'
+            ORDER BY created_at DESC, id DESC LIMIT 5
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $latest_patients = [];
+    }
+}
+
+// إعادة تعبئة النموذج بعد خطأ في الحفظ
+$old = fn($key) => htmlspecialchars($_POST[$key] ?? '');
 ?>
 
 <!DOCTYPE html>
@@ -264,7 +290,7 @@ $form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المرضى - عيادة الأسنان</title>
+    <title><?= htmlspecialchars($pageTitle) ?> - عيادة الأسنان</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -296,6 +322,182 @@ $form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php'
             </div>
         <?php endif; ?>
 
+        <?php if ($action === 'add'): ?>
+        <!-- ================= إضافة مريض جديد (هوية EDSM) ================= -->
+        <form method="POST" id="patientForm">
+            <input type="hidden" name="action" value="add">
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <!-- النموذج -->
+                <div class="edsm-card is-flush lg:col-span-2 fade-in">
+                    <section class="edsm-form-sec">
+                        <div class="edsm-form-sec-head">
+                            <span class="edsm-avatar-soft"><i class="fas fa-id-card"></i></span>
+                            <div>
+                                <h3>المعلومات الأساسية</h3>
+                                <p>الحقول المعلّمة بـ <span class="edsm-req">*</span> مطلوبة</p>
+                            </div>
+                        </div>
+
+                        <div class="edsm-form-grid">
+                            <div class="is-wide">
+                                <label for="pfName" class="edsm-label">الاسم الكامل <span class="edsm-req">*</span></label>
+                                <input type="text" name="name" id="pfName" required maxlength="100" autocomplete="off"
+                                       class="edsm-field" value="<?= $old('name') ?>" placeholder="الاسم الثلاثي للمريض">
+                                <p class="edsm-field-error" id="pfNameError" hidden></p>
+                            </div>
+
+                            <div>
+                                <label for="pfPhone" class="edsm-label">رقم الهاتف <span class="edsm-req">*</span></label>
+                                <input type="tel" name="phone" id="pfPhone" required pattern="09[0-9]{8}" inputmode="numeric" autocomplete="off"
+                                       class="edsm-field edsm-ltr edsm-num" value="<?= $old('phone') ?>" placeholder="09xxxxxxxx">
+                                <p class="edsm-field-error" id="pfPhoneError" hidden></p>
+                            </div>
+
+                            <div>
+                                <span class="edsm-label" id="pfGenderLabel">الجنس <span class="edsm-req">*</span></span>
+                                <div class="edsm-seg" id="pfGender" role="radiogroup" aria-labelledby="pfGenderLabel">
+                                    <label>
+                                        <input type="radio" name="gender" value="male" required <?= ($_POST['gender'] ?? '') === 'male' ? 'checked' : '' ?>>
+                                        <span><i class="fas fa-mars"></i> ذكر</span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="gender" value="female" <?= ($_POST['gender'] ?? '') === 'female' ? 'checked' : '' ?>>
+                                        <span><i class="fas fa-venus"></i> أنثى</span>
+                                    </label>
+                                </div>
+                                <p class="edsm-field-error" id="pfGenderError" hidden></p>
+                            </div>
+
+                            <div>
+                                <label for="dateOfBirth" class="edsm-label">تاريخ الميلاد</label>
+                                <input type="date" name="date_of_birth" id="dateOfBirth" max="<?= date('Y-m-d') ?>"
+                                       class="edsm-field edsm-num" value="<?= $old('date_of_birth') ?>">
+                                <p class="edsm-field-error" id="dateOfBirthError" hidden></p>
+                            </div>
+
+                            <div>
+                                <label for="ageInput" class="edsm-label">العمر</label>
+                                <input type="number" name="age" id="ageInput" min="1" max="150" inputmode="numeric"
+                                       class="edsm-field edsm-num" value="<?= $old('age') ?>" placeholder="بالسنوات (اختياري)">
+                                <p class="edsm-field-error" id="ageInputError" hidden></p>
+                                <p class="edsm-hint">يُحسب تلقائياً عند إدخال تاريخ الميلاد</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="edsm-form-sec">
+                        <div class="edsm-form-sec-head">
+                            <span class="edsm-avatar-soft is-teal"><i class="fas fa-address-book"></i></span>
+                            <div>
+                                <h3>معلومات التواصل</h3>
+                                <p>للوصول إلى المريض أو أحد أقاربه عند الحاجة</p>
+                            </div>
+                        </div>
+
+                        <div class="edsm-form-grid">
+                            <div>
+                                <label for="pfEmergency" class="edsm-label">هاتف الطوارئ</label>
+                                <input type="tel" name="emergency_contact" id="pfEmergency" inputmode="numeric" autocomplete="off"
+                                       class="edsm-field edsm-ltr edsm-num" value="<?= $old('emergency_contact') ?>" placeholder="رقم هاتف أحد الأقارب">
+                            </div>
+
+                            <div>
+                                <label for="pfAddress" class="edsm-label">العنوان</label>
+                                <input type="text" name="address" id="pfAddress" class="edsm-field"
+                                       value="<?= $old('address') ?>" placeholder="المدينة، الحي، الشارع...">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="edsm-form-sec">
+                        <div class="edsm-form-sec-head">
+                            <span class="edsm-avatar-soft is-red"><i class="fas fa-notes-medical"></i></span>
+                            <div>
+                                <h3>المعلومات الطبية</h3>
+                                <p>تظهر للطبيب في ملف المريض قبل بدء أي علاج</p>
+                            </div>
+                        </div>
+
+                        <label for="pfHistory" class="edsm-label">التاريخ المرضي <span class="font-normal text-gray-500">(أمراض مزمنة - الأدوية - الحساسية - عمليات جراحية سابقة)</span></label>
+                        <div class="edsm-quick-dates mb-2" id="pfHistoryChips">
+                            <span>إضافة سريعة:</span>
+                            <?php foreach (['سكري', 'ارتفاع ضغط الدم', 'أمراض القلب', 'ربو', 'مميّعات الدم', 'حساسية البنسلين', 'حمل'] as $condition): ?>
+                                <button type="button" data-term="<?= $condition ?>"><?= $condition ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                        <textarea name="medical_history" id="pfHistory" rows="4" class="edsm-field"
+                                  placeholder="اكتب أي أمراض مزمنة أو أدوية أو حساسية أو عمليات سابقة... اتركه فارغاً إن لم يوجد"><?= $old('medical_history') ?></textarea>
+                    </section>
+
+                    <div class="edsm-form-foot">
+                        <button type="submit" class="edsm-btn edsm-btn-navy edsm-btn-lg">
+                            <i class="fas fa-save"></i>
+                            <?= $_SESSION['user_role'] === 'doctor' ? 'حفظ وفتح ملف المريض' : 'حفظ المريض' ?>
+                        </button>
+                        <a href="<?= htmlspecialchars($form_close_url) ?>" class="edsm-btn edsm-btn-sky edsm-btn-lg">إلغاء</a>
+                    </div>
+                </div>
+
+                <!-- الشريط الجانبي: معاينة الملف + أحدث المرضى -->
+                <aside class="edsm-side-sticky space-y-6">
+                    <section class="edsm-card edsm-pinfo edsm-pf-preview hidden lg:block fade-in" aria-label="معاينة ملف المريض">
+                        <span class="edsm-chip edsm-pf-preview-tag"><i class="far fa-eye"></i> معاينة الملف</span>
+                        <div class="edsm-pinfo-avatar edsm-pf-avatar">
+                            <span data-avatar="" class="edsm-pf-avatar-empty"><i class="fas fa-user"></i></span>
+                            <span data-avatar="male" hidden><?= patientAvatarSvg('male', 'pfAvatarMale') ?></span>
+                            <span data-avatar="female" hidden><?= patientAvatarSvg('female', 'pfAvatarFemale') ?></span>
+                        </div>
+                        <h2 class="edsm-pinfo-name" id="pvName">اسم المريض</h2>
+
+                        <dl class="edsm-pinfo-list">
+                            <div><dt>العمر:</dt><dd id="pvAge">—</dd></div>
+                            <div><dt>تاريخ الولادة:</dt><dd id="pvDob" class="edsm-num">—</dd></div>
+                            <div><dt>الجنس:</dt><dd id="pvGender">—</dd></div>
+                        </dl>
+
+                        <ul class="edsm-pinfo-contact">
+                            <li><i class="fas fa-phone-alt"></i><span id="pvPhone" class="edsm-num" dir="ltr">—</span></li>
+                            <li class="is-alert" id="pvEmergencyRow" hidden><i class="fas fa-phone-volume"></i><span>طوارئ: <span id="pvEmergency" class="edsm-num" dir="ltr"></span></span></li>
+                            <li id="pvAddressRow" hidden><i class="fas fa-map-marker-alt"></i><span id="pvAddress"></span></li>
+                            <li class="is-alert" id="pvHistoryRow" hidden><i class="fas fa-notes-medical"></i><span id="pvHistory"></span></li>
+                        </ul>
+
+                        <div class="edsm-booking-summary mt-4" id="pvBirthday">
+                            <i class="fas fa-birthday-cake"></i>
+                            <span>أدخل تاريخ الميلاد لإنشاء متابعة سنوية للفحص الوقائي</span>
+                        </div>
+                    </section>
+
+                    <section class="edsm-card fade-in">
+                        <div class="edsm-card-head" style="margin-bottom: 8px;">
+                            <h3 class="edsm-card-title" style="font-size: 17px;"><i class="fas fa-history"></i> أحدث المرضى المضافين</h3>
+                            <a href="<?= htmlspecialchars($form_close_url) ?>" class="edsm-link text-sm">عرض الكل <i class="fas fa-chevron-left text-xs"></i></a>
+                        </div>
+                        <?php if (empty($latest_patients)): ?>
+                            <p class="text-sm text-gray-500 py-3 text-center">لا يوجد مرضى بعد</p>
+                        <?php else: ?>
+                            <div class="divide-y divide-gray-100">
+                                <?php foreach ($latest_patients as $latest): ?>
+                                    <a href="<?= $profile_url . (int)$latest['id'] ?>" class="edsm-upcoming">
+                                        <span class="flex-1 min-w-0">
+                                            <span class="edsm-row-title block truncate"><?= htmlspecialchars($latest['name']) ?></span>
+                                            <span class="edsm-row-meta block edsm-num">
+                                                <span dir="ltr"><?= htmlspecialchars($latest['phone']) ?></span> ·
+                                                <?= $latest['created_at'] ? date('d/m/Y H:i', strtotime($latest['created_at'])) : date('d/m/Y', strtotime($latest['registration_date'])) ?>
+                                            </span>
+                                        </span>
+                                        <span class="edsm-avatar-soft is-violet"><i class="fas fa-tooth"></i></span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+                </aside>
+            </div>
+        </form>
+
+        <?php else: ?>
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 fade-in">
             <div class="bg-white rounded-lg shadow-lg p-6 border-r-4 border-blue-500 hover-scale">
@@ -385,127 +587,6 @@ $form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php'
                 </div>
             </div>
         </div>
-
-        <!-- Add Patient Form -->
-        <?php if ($action === 'add'): ?>
-            <div class="bg-white rounded-lg shadow-lg p-8 mb-8 fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-user-plus text-green-600 ml-2"></i>
-                        إضافة مريض جديد
-                    </h3>
-                    <a href="<?= $form_close_url ?>" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-2xl"></i>
-                    </a>
-                </div>
-                
-                <form method="POST" class="space-y-6">
-                    <input type="hidden" name="action" value="add">
-                    
-                    <!-- Basic Information -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-blue-800 mb-4">
-                            <i class="fas fa-user ml-2"></i>
-                            المعلومات الأساسية
-                        </h4>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">الاسم الكامل *</label>
-                                <input type="text" name="name" required 
-                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       placeholder="الاسم الكامل">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">رقم الهاتف *</label>
-                                <input type="tel" name="phone" required pattern="09[0-9]{8}"
-                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       placeholder="09xxxxxxxx">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">العمر</label>
-                                <input type="number" name="age" id="ageInput" min="1" max="150"
-                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       placeholder="العمر بالسنوات (اختياري)">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">
-                                    تاريخ الميلاد
-                                    <span class="text-sm text-green-600">(لإنشاء متابعة سنوية)</span>
-                                </label>
-                                <input type="date" name="date_of_birth" id="dateOfBirth"
-                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <p class="text-xs text-gray-500 mt-1">سيتم إنشاء تذكير سنوي لعيد الميلاد للفحص الوقائي</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">الجنس *</label>
-                                <select name="gender" required 
-                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                    <option value="">اختر الجنس</option>
-                                    <option value="male">ذكر</option>
-                                    <option value="female">أنثى</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <label class="block text-gray-700 font-semibold mb-2">العنوان</label>
-                            <textarea name="address" rows="2"
-                                      class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                      placeholder="العنوان الكامل"></textarea>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">هاتف الطوارئ</label>
-                                <input type="tel" name="emergency_contact" 
-                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       placeholder="رقم هاتف أحد الأقارب">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Medical Information -->
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-red-800 mb-4">
-                            <i class="fas fa-heartbeat ml-2"></i>
-                            المعلومات الطبية
-                        </h4>
-                        
-                        <div class="space-y-6">
-                            <div>
-                                <label class="block text-gray-700 font-semibold mb-2">التاريخ المرضي (أمراض مزمنة - الأدوية - الحساسية - عمليات جراحية سابقة):</label>
-                                <textarea name="medical_history" rows="3"
-                                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                          placeholder="أي أمراض مزمنة أو عمليات سابقة..."></textarea>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
- 
-                                 
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Submit Buttons -->
-                    <div class="flex space-x-4 space-x-reverse pt-4">
-                        <button type="submit" 
-                                class="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-                            <i class="fas fa-save ml-2"></i>
-                            إضافة المريض
-                        </button>
-                        <a href="<?= $form_close_url ?>" 
-                           class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 px-4 rounded-lg transition duration-200 text-center">
-                            إلغاء
-                        </a>
-                    </div>
-                </form>
-            </div>
-        <?php endif; ?>
 
         <!-- Patients List -->
         <div class="bg-white rounded-lg shadow-lg overflow-hidden fade-in">
@@ -676,106 +757,254 @@ $form_close_url = $_SESSION['user_role'] === 'doctor' ? '../doctor/patients.php'
                 </nav>
             </div>
         <?php endif; ?>
+        <?php endif; /* $action === 'add' */ ?>
     </div>
 
     <script>
-        // Auto-submit search form on input
+        // أرقام الهاتف: أرقام فقط وبحد أقصى 10
+        document.querySelectorAll('input[type="tel"]').forEach(input => {
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 10);
+            });
+        });
+    </script>
+
+    <?php if ($action === 'add'): ?>
+    <script>
+        (function () {
+            const form = document.getElementById('patientForm');
+            const nameInput = document.getElementById('pfName');
+            const phoneInput = document.getElementById('pfPhone');
+            const dobInput = document.getElementById('dateOfBirth');
+            const ageInput = document.getElementById('ageInput');
+            const emergencyInput = document.getElementById('pfEmergency');
+            const addressInput = document.getElementById('pfAddress');
+            const historyInput = document.getElementById('pfHistory');
+            const genderGroup = document.getElementById('pfGender');
+            const genderInputs = form.querySelectorAll('input[name="gender"]');
+
+            // التحقق يتم هنا برسائل تحت الحقول؛ بدون JavaScript يبقى تحقق المتصفح
+            form.noValidate = true;
+
+            function formatDate(date) {
+                try {
+                    return date.toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
+                } catch (e) {
+                    return date.toISOString().slice(0, 10);
+                }
+            }
+
+            function parseDate(value) {
+                const [y, m, d] = value.split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+
+            function ageLabel(years) {
+                if (years === 1) return 'عام واحد';
+                if (years === 2) return 'عامان';
+                if (years >= 3 && years <= 10) return years + ' أعوام';
+                return years + ' عاماً';
+            }
+
+            function ageFromBirthDate(birthDate) {
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return age;
+            }
+
+            function selectedGender() {
+                const checked = form.querySelector('input[name="gender"]:checked');
+                return checked ? checked.value : '';
+            }
+
+            // ---------- العمر ⇄ تاريخ الميلاد ----------
+            dobInput.addEventListener('change', function () {
+                delete this.dataset.auto;
+                if (this.value) {
+                    const age = ageFromBirthDate(parseDate(this.value));
+                    if (age >= 0 && age <= 150) ageInput.value = age || '';
+                }
+                clearError(this);
+                updatePreview();
+            });
+
+            // عند إدخال العمر فقط يُقدَّر تاريخ الميلاد (1 كانون الثاني) ويُحدَّث مع كل تعديل
+            ageInput.addEventListener('input', function () {
+                if (dobInput.value && dobInput.dataset.auto !== '1') {
+                    updatePreview();
+                    return;
+                }
+                const age = parseInt(this.value, 10);
+                if (age > 0 && age <= 150) {
+                    dobInput.value = (new Date().getFullYear() - age) + '-01-01';
+                    dobInput.dataset.auto = '1';
+                } else if (dobInput.dataset.auto === '1') {
+                    dobInput.value = '';
+                    delete dobInput.dataset.auto;
+                }
+                clearError(this);
+                updatePreview();
+            });
+
+            // ---------- إضافة سريعة للتاريخ المرضي ----------
+            const chips = document.querySelectorAll('#pfHistoryChips button');
+
+            function syncChips() {
+                chips.forEach(chip => chip.classList.toggle('is-on', historyInput.value.includes(chip.dataset.term)));
+            }
+
+            chips.forEach(chip => {
+                chip.addEventListener('click', function () {
+                    const term = this.dataset.term;
+                    const current = historyInput.value.trim();
+                    if (!current.includes(term)) {
+                        historyInput.value = current ? current.replace(/[،,\s]+$/, '') + '، ' + term : term;
+                    }
+                    historyInput.focus();
+                    syncChips();
+                    updatePreview();
+                });
+            });
+
+            // ---------- معاينة الملف ----------
+            const avatars = document.querySelectorAll('.edsm-pf-avatar [data-avatar]');
+
+            function setText(id, value, fallback) {
+                document.getElementById(id).textContent = value || fallback;
+            }
+
+            function setRow(rowId, textId, value) {
+                document.getElementById(rowId).hidden = !value;
+                document.getElementById(textId).textContent = value;
+            }
+
+            function updatePreview() {
+                const gender = selectedGender();
+                const age = parseInt(ageInput.value, 10);
+
+                setText('pvName', nameInput.value.trim(), 'اسم المريض');
+                document.getElementById('pvName').classList.toggle('is-empty', !nameInput.value.trim());
+                setText('pvPhone', phoneInput.value.trim(), '—');
+                setText('pvGender', gender === 'male' ? 'ذكر' : gender === 'female' ? 'أنثى' : '', '—');
+                setText('pvAge', age > 0 ? ageLabel(age) : '', '—');
+                setText('pvDob', dobInput.value && dobInput.dataset.auto !== '1' ? formatDate(parseDate(dobInput.value)) : '', '—');
+                setRow('pvEmergencyRow', 'pvEmergency', emergencyInput.value.trim());
+                setRow('pvAddressRow', 'pvAddress', addressInput.value.trim());
+                setRow('pvHistoryRow', 'pvHistory', historyInput.value.trim());
+
+                avatars.forEach(el => { el.hidden = el.dataset.avatar !== gender; });
+
+                // متابعة عيد الميلاد: نفس حساب الخادم (هذا العام، أو العام القادم إن مرّ)
+                const box = document.getElementById('pvBirthday');
+                const text = box.querySelector('span');
+                box.classList.remove('is-ready', 'is-estimated');
+                if (!dobInput.value) {
+                    text.textContent = 'أدخل تاريخ الميلاد لإنشاء متابعة سنوية للفحص الوقائي';
+                    return;
+                }
+                const birth = parseDate(dobInput.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const next = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
+                if (next <= today) next.setFullYear(next.getFullYear() + 1);
+
+                if (dobInput.dataset.auto === '1') {
+                    box.classList.add('is-estimated');
+                    text.textContent = 'تاريخ الميلاد مُقدَّر من العمر، فستكون المتابعة في ' + formatDate(next) + '. أدخل التاريخ الصحيح لتكون في موعدها.';
+                } else {
+                    box.classList.add('is-ready');
+                    text.textContent = 'ستُنشأ متابعة عيد الميلاد السنوية في ' + formatDate(next);
+                }
+            }
+
+            [nameInput, phoneInput, emergencyInput, addressInput].forEach(input => {
+                input.addEventListener('input', () => { clearError(input); updatePreview(); });
+            });
+            historyInput.addEventListener('input', () => { syncChips(); updatePreview(); });
+            genderInputs.forEach(input => input.addEventListener('change', () => { clearError(genderGroup); updatePreview(); }));
+
+            // ---------- التحقق ----------
+            function errorBox(el) {
+                return document.getElementById((el === genderGroup ? 'pfGender' : el.id) + 'Error');
+            }
+
+            function setError(el, message) {
+                el.classList.add('is-invalid');
+                const box = errorBox(el);
+                box.textContent = message;
+                box.hidden = false;
+            }
+
+            function clearError(el) {
+                el.classList.remove('is-invalid');
+                const box = errorBox(el);
+                if (box) box.hidden = true;
+            }
+
+            form.addEventListener('submit', function (e) {
+                const invalid = [];
+                const phone = phoneInput.value.trim();
+                const age = ageInput.value;
+
+                if (!nameInput.value.trim()) {
+                    setError(nameInput, 'يرجى إدخال اسم المريض');
+                    invalid.push(nameInput);
+                }
+                if (!phone) {
+                    setError(phoneInput, 'يرجى إدخال رقم الهاتف');
+                    invalid.push(phoneInput);
+                } else if (!/^09[0-9]{8}$/.test(phone)) {
+                    setError(phoneInput, 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام');
+                    invalid.push(phoneInput);
+                }
+                if (!selectedGender()) {
+                    setError(genderGroup, 'يرجى اختيار الجنس');
+                    invalid.push(genderInputs[0]);
+                }
+                if (dobInput.value && parseDate(dobInput.value) > new Date()) {
+                    setError(dobInput, 'تاريخ الميلاد لا يمكن أن يكون في المستقبل');
+                    invalid.push(dobInput);
+                }
+                if (age && (age < 1 || age > 150)) {
+                    setError(ageInput, 'العمر يجب أن يكون بين 1 و 150 سنة');
+                    invalid.push(ageInput);
+                }
+
+                if (invalid.length) {
+                    e.preventDefault();
+                    invalid[0].focus();
+                    return;
+                }
+
+                const submit = form.querySelector('button[type="submit"]');
+                submit.disabled = true;
+                submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الحفظ...';
+            });
+
+            syncChips();
+            updatePreview();
+            if (!nameInput.value) nameInput.focus();
+        })();
+    </script>
+    <?php else: ?>
+    <script>
+        // البحث التلقائي أثناء الكتابة
         const searchInput = document.querySelector('input[name="search"]');
         let searchTimeout;
-        
+
         searchInput?.addEventListener('input', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 this.form.submit();
             }, 1000);
         });
-        
-        // Phone number formatting
-        const phoneInputs = document.querySelectorAll('input[type="tel"]');
-        phoneInputs.forEach(input => {
-            input.addEventListener('input', function() {
-                let value = this.value.replace(/\D/g, '');
-                if (value.length > 10) value = value.substr(0, 10);
-                this.value = value;
-            });
-        });
-        
-        // Age validation
-        const ageInput = document.querySelector('input[name="age"]');
-        ageInput?.addEventListener('input', function() {
-            if (this.value < 1) this.value = 1;
-            if (this.value > 150) this.value = 150;
-        });
 
-        // Auto-calculate age from date of birth
-        const dateOfBirthInput = document.getElementById('dateOfBirth');
-        const ageInputField = document.getElementById('ageInput');
-
-        if (dateOfBirthInput && ageInputField) {
-            dateOfBirthInput.addEventListener('change', function() {
-                if (this.value) {
-                    const birthDate = new Date(this.value);
-                    const today = new Date();
-
-                    let age = today.getFullYear() - birthDate.getFullYear();
-                    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                        age--;
-                    }
-
-                    if (age >= 0 && age <= 150) {
-                        ageInputField.value = age;
-                    }
-                }
-            });
-
-            // Also update date of birth when age is changed manually
-            ageInputField.addEventListener('input', function() {
-                if (this.value && this.value > 0 && this.value <= 150) {
-                    const currentYear = new Date().getFullYear();
-                    const estimatedBirthYear = currentYear - parseInt(this.value);
-
-                    // Only set if date of birth is empty
-                    if (!dateOfBirthInput.value) {
-                        dateOfBirthInput.value = `${estimatedBirthYear}-01-01`;
-                    }
-                }
-            });
-        }
-
-        // Form validation
-        const form = document.querySelector('form[method="POST"]');
-        form?.addEventListener('submit', function(e) {
-            const name = this.querySelector('input[name="name"]').value.trim();
-            const phone = this.querySelector('input[name="phone"]').value.trim();
-            const age = this.querySelector('input[name="age"]').value;
-            const gender = this.querySelector('select[name="gender"]').value;
-
-            if (!name || !phone || !gender) {
-                e.preventDefault();
-                alert('يرجى ملء جميع الحقول المطلوبة');
-                return;
-            }
-
-            if (!/^09[0-9]{8}$/.test(phone)) {
-                e.preventDefault();
-                alert('رقم الهاتف غير صحيح. يجب أن يبدأ بـ 09 ويحتوي على 10 أرقام');
-                return;
-            }
-
-            // Validate age only if provided
-            if (age && (age < 1 || age > 150)) {
-                e.preventDefault();
-                alert('العمر يجب أن يكون بين 1 و 150 سنة');
-                return;
-            }
-        });
-        
-        // Auto-focus on search input
-        if (!window.location.search.includes('action=add')) {
-            searchInput?.focus();
-        }
+        searchInput?.focus();
     </script>
+    <?php endif; ?>
 </body>
 </html>

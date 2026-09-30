@@ -1359,8 +1359,82 @@ a.edsm-upcoming:hover { background: #F6F9FD; }
 .bg-teal-800{background-color:#115E59}.text-teal-800{color:#115E59}.border-teal-800{border-color:#115E59}.hover\:bg-teal-800:hover{background-color:#115E59}.hover\:text-teal-800:hover{color:#115E59}.hover\:border-teal-800:hover{border-color:#115E59}.focus\:border-teal-800:focus{border-color:#115E59}.focus\:ring-teal-800:focus{--tw-ring-color:rgba(17, 94, 89, 0.5)}.ring-teal-800{--tw-ring-color:rgba(17, 94, 89, 0.5)}.from-teal-800{--tw-gradient-from:#115E59;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(17, 94, 89, 0))}.via-teal-800{--tw-gradient-stops:var(--tw-gradient-from),#115E59,var(--tw-gradient-to,rgba(17, 94, 89, 0))}.to-teal-800{--tw-gradient-to:#115E59}.hover\:from-teal-800:hover{--tw-gradient-from:#115E59;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(17, 94, 89, 0))}.hover\:to-teal-800:hover{--tw-gradient-to:#115E59}
 .bg-teal-900{background-color:#134E4A}.text-teal-900{color:#134E4A}.border-teal-900{border-color:#134E4A}.hover\:bg-teal-900:hover{background-color:#134E4A}.hover\:text-teal-900:hover{color:#134E4A}.hover\:border-teal-900:hover{border-color:#134E4A}.focus\:border-teal-900:focus{border-color:#134E4A}.focus\:ring-teal-900:focus{--tw-ring-color:rgba(19, 78, 74, 0.5)}.ring-teal-900{--tw-ring-color:rgba(19, 78, 74, 0.5)}.from-teal-900{--tw-gradient-from:#134E4A;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(19, 78, 74, 0))}.via-teal-900{--tw-gradient-stops:var(--tw-gradient-from),#134E4A,var(--tw-gradient-to,rgba(19, 78, 74, 0))}.to-teal-900{--tw-gradient-to:#134E4A}.hover\:from-teal-900:hover{--tw-gradient-from:#134E4A;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(19, 78, 74, 0))}.hover\:to-teal-900:hover{--tw-gradient-to:#134E4A}
 
+/* ---------- add patient (nurse/patients.php?action=add) ---------- */
+/* بطاقة نموذج بأقسام، على نمط صفحة حجز موعد؛ الشريط الجانبي يعيد استخدام بطاقة ملف المريض */
+.edsm-card.is-flush { padding: 0; }
+.edsm-form-sec { padding: 22px 24px; }
+.edsm-form-sec + .edsm-form-sec { border-top: 1px solid #EEF2F7; }
+.edsm-form-sec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.edsm-form-sec-head h3 { font-size: 17px; font-weight: 800; margin: 0; line-height: 1.4; }
+.edsm-form-sec-head p { font-size: 13px; color: var(--edsm-muted); margin: 1px 0 0; }
+.edsm-form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 18px; }
+@media (min-width: 640px) {
+    .edsm-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .edsm-form-grid .is-wide { grid-column: 1 / -1; }
+}
+.edsm-form-sec textarea.edsm-field { height: auto; padding: 10px 12px; line-height: 1.7; resize: vertical; }
+.edsm-ltr { direction: ltr; text-align: right; }
+.edsm-req { color: #DC2626; }
+.edsm-hint { font-size: 12.5px; color: var(--edsm-muted); margin-top: 5px; }
+.edsm-field-error { font-size: 12.5px; font-weight: 700; color: #DC2626; margin-top: 5px; }
+.edsm-field.is-invalid { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
+
+/* segmented radio (الجنس) */
+.edsm-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.edsm-seg label { position: relative; display: block; }
+.edsm-seg input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.edsm-seg span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    border: 1px solid #D5DEE9;
+    border-radius: 9px;
+    background: #fff;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.edsm-seg span i { color: #94A3B8; }
+.edsm-seg label:hover span { border-color: #0B7CF0; }
+.edsm-seg input:checked + span { background: #DCEBFF; border-color: #0B7CF0; color: #0B5ED7; }
+.edsm-seg input:checked + span i { color: #0B5ED7; }
+.edsm-seg input:focus-visible + span { box-shadow: 0 0 0 3px rgba(11, 124, 240, 0.18); }
+.edsm-seg.is-invalid span { border-color: #EF4444; }
+
+.edsm-quick-dates button.is-on { background: #DCEBFF; border-color: #0B7CF0; color: #0B5ED7; }
+.edsm-quick-dates button.is-on::before { content: '\2713'; margin-inline-end: 4px; }
+
+.edsm-form-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px 24px;
+    background: #F8FBFF;
+    border-top: 1px solid #EEF2F7;
+}
+.edsm-form-foot .edsm-btn:disabled { opacity: 0.7; cursor: wait; }
+
+@media (min-width: 1024px) { .edsm-side-sticky { position: sticky; top: 84px; } }
+
+/* معاينة ملف المريض */
+.edsm-pf-preview-tag { position: absolute; top: 14px; inset-inline-start: 14px; font-size: 12px; padding: 3px 10px; }
+.edsm-pf-preview .edsm-pinfo-name { font-size: 22px; overflow-wrap: anywhere; }
+.edsm-pf-preview .edsm-pinfo-name.is-empty { color: #A0AEC0; }
+.edsm-pf-avatar > span { display: block; width: 100%; height: 100%; }
+.edsm-pf-avatar > span[hidden] { display: none; }
+.edsm-pf-avatar-empty { display: flex !important; align-items: center; justify-content: center; background: #EEF4FB; color: #A9BCD3; font-size: 40px; }
+.edsm-pf-avatar-empty[hidden] { display: none !important; }
+.edsm-pinfo-contact li[hidden] { display: none; }
+.edsm-pinfo-contact li span { overflow-wrap: anywhere; }
+.edsm-booking-summary.is-estimated { background: #FFF7E6; border: 1px solid #F6D58E; color: #7A4B00; }
+
 /* ---------- small screens ---------- */
 @media (max-width: 640px) {
+    .edsm-form-sec { padding: 18px 16px; }
+    .edsm-form-foot { padding: 14px 16px; }
     .edsm-topbar-inner { height: 72px; gap: 8px; }
     .edsm-topbar { border-radius: 0 0 20px 20px; }
     .edsm-brand { gap: 8px; }

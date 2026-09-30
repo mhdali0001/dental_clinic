@@ -34,119 +34,236 @@ if (isset($_SESSION['user_id'])) {
         /* تصميم صفحة الدخول: design/Login Page.png — ألوان الهوية: design/Visual Identity.png */
         :root {
             --edsm-blue: #0B5ED7;
-            --edsm-navy: #0A3D7A;
-            --edsm-navy-deep: #0A2A5E;
-            --edsm-teal: #14B8A6;
+            --edsm-navy: #06326B;
+            --edsm-teal: #06A89F;
             --edsm-text: #1F2937;
-            --edsm-muted: #64748B;
+            --edsm-muted: #7992B0;
+            --edsm-line: #D5E2F0;
         }
         * { font-family: 'Almarai', 'Segoe UI', Tahoma, sans-serif; }
         .latin { font-family: 'Montserrat', 'Almarai', sans-serif; }
-        body { background: #F5F9FE; color: var(--edsm-text); }
+        body { background: #F7FAFD; color: var(--edsm-text); }
+        .ico { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
         /* wordmark */
-        .wordmark { font-family: 'Montserrat', sans-serif; font-weight: 800; direction: ltr; line-height: 1; letter-spacing: 1px; color: var(--edsm-navy); }
+        .wordmark { font-family: 'Montserrat', sans-serif; font-weight: 800; direction: ltr; line-height: 1; letter-spacing: 0.5px; color: var(--edsm-navy); }
         .wordmark span { color: var(--edsm-teal); }
-        .wordmark-sub { font-family: 'Montserrat', sans-serif; direction: ltr; color: var(--edsm-navy); font-weight: 500; }
+        .wordmark-sub { font-family: 'Montserrat', sans-serif; direction: ltr; color: #012C60; font-weight: 500; white-space: nowrap; }
 
-        /* ---------- art panel (left) ---------- */
+        /* ---------- art panel (left) ----------
+           أبعاد التصميم مرجعها شاشة 1536×1024؛ --dp = بكسل واحد من التصميم */
         .art {
+            --dp: clamp(0.6px, min(calc(100vw / 1536), calc(100vh / 1024)), 1.35px);
+            --sp: calc(50vw / 788); /* مقياس المشهد السفلي (عرض اللوحة 788 في التصميم) */
             position: relative;
             overflow: hidden;
-            background: linear-gradient(180deg, #F7FBFF 0%, #EFF6FD 45%, #E7F1FB 100%);
+            background: linear-gradient(180deg, #FBFDFE 0%, #F3F8FC 55%, #EDF5FB 100%);
         }
-        .art-photo {
-            position: absolute;
-            inset-inline: 0;
-            bottom: 0;
-            height: 64%;
-            background: url('assets/img/login-clinic.jpg') center bottom / cover no-repeat;
+        .art-head { position: relative; z-index: 2; padding-top: calc(150 * var(--dp)); text-align: center; }
+        .art-brand { display: inline-flex; flex-direction: column; text-align: right; }
+        .art-lockup { display: flex; align-items: center; gap: calc(14 * var(--dp)); }
+        .art-lockup img { width: calc(140 * var(--dp)); height: auto; }
+        .art-lockup .wordmark { font-size: calc(97 * var(--dp)); }
+        .art-lockup .wordmark-sub { font-size: calc(17.5 * var(--dp)); margin-top: calc(10 * var(--dp)); }
+        .art-ar { display: flex; align-items: center; gap: calc(10 * var(--dp)); margin-top: calc(6 * var(--dp)); direction: rtl; color: #365A84; font-size: calc(17 * var(--dp)); }
+        .art-ar::before, .art-ar::after { content: ''; flex: 1; height: 1px; background: #C9D5E2; }
+        .tagline {
+            align-self: flex-end;
+            margin: calc(46 * var(--dp)) 0 0 calc(14 * var(--dp));
+            color: #0759B4;
+            font-size: calc(33 * var(--dp));
+            font-weight: 700;
+            line-height: 1.4;
         }
-        .art-photo::before { /* blend the photo into the light top area */
-            content: '';
+        .tagline-bar { width: calc(70 * var(--dp)); height: calc(4 * var(--dp)); min-height: 3px; border-radius: 4px; background: #0CB2AD; margin: calc(20 * var(--dp)) auto 0 0; }
+
+        .art-scene { position: absolute; inset-inline: 0; bottom: 0; height: min(calc(542 * var(--sp)), 58vh); }
+        .art-scene > svg {
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, #F0F7FE 0%, rgba(240, 247, 254, 0.55) 22%, rgba(240, 247, 254, 0) 45%);
+            width: 100%;
+            height: 100%;
+            -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 24%);
         }
-        .art-wave { position: absolute; inset-inline: 0; bottom: 0; width: 100%; height: 34%; }
         .art-features {
             position: absolute;
-            inset-inline: 0;
-            bottom: 34px;
+            left: 7%;
+            bottom: calc(79 * var(--sp));
             display: flex;
-            justify-content: center;
-            gap: 0;
             color: #fff;
-            z-index: 2;
+            font-size: max(11px, calc(13.5 * var(--sp)));
+            line-height: 1.5;
         }
-        .art-feature { display: flex; align-items: center; gap: 12px; padding: 0 28px; font-size: 14.5px; line-height: 1.35; }
-        .art-feature + .art-feature { border-inline-start: 1px solid rgba(255, 255, 255, 0.35); }
-        .art-feature i { font-size: 26px; opacity: 0.95; }
-        .tagline { color: var(--edsm-blue); }
-        .tagline-bar { width: 70px; height: 4px; border-radius: 4px; background: var(--edsm-teal); }
-        .brand-rule { flex: 1; height: 1px; background: #94A3B8; opacity: 0.6; }
+        .art-feature { display: flex; align-items: center; gap: calc(12 * var(--sp)); padding: 0 calc(36 * var(--sp)); }
+        .art-feature:first-child { padding-right: 0; }
+        .art-feature:last-child { padding-left: 0; }
+        .art-feature:not(:last-child) { border-left: 1px solid rgba(255, 255, 255, 0.4); }
+        .art-feature svg { width: max(20px, calc(28 * var(--sp))); height: max(20px, calc(28 * var(--sp))); flex-shrink: 0; stroke-width: 1.5; }
 
         /* ---------- form side (right) ---------- */
         .form-side { position: relative; overflow: hidden; }
         .form-side::before { /* large faint tooth, top corner */
             content: '';
             position: absolute;
-            top: -40px;
-            inset-inline-start: -60px;
-            width: 320px;
-            height: 300px;
+            top: -50px;
+            inset-inline-start: -70px;
+            width: 300px;
+            height: 280px;
             background: url('assets/img/edsm-icon.png') no-repeat center / contain;
-            opacity: 0.05;
+            opacity: 0.045;
+            filter: saturate(0.5);
             pointer-events: none;
         }
         .login-card {
+            position: relative;
+            width: 100%;
+            max-width: 565px;
+            padding: 44px 57px 46px;
             background: #fff;
-            border-radius: 24px;
-            box-shadow: 0 24px 60px rgba(11, 94, 215, 0.10), 0 2px 8px rgba(15, 23, 42, 0.04);
-            border: 1px solid #E6EEF8;
+            border-radius: 20px;
+            border: 1px solid #EBF1F8;
+            box-shadow: 0 22px 60px rgba(16, 70, 140, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03);
         }
+        .card-logo { display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .card-logo img { width: 76px; height: auto; }
+        .card-logo .wordmark { font-size: 49px; }
+        .card-logo .wordmark-sub { font-size: 9px; font-weight: 600; margin-top: 4px; letter-spacing: -0.1px; }
+        .card-head { text-align: center; margin: 48px 0 36px; }
+        .card-head h1 { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 26px; font-weight: 800; color: var(--edsm-navy); }
+        .card-head h1 i { color: #1C6FD1; font-size: 27px; transform: rotate(-14deg); }
+        .card-head p { margin-top: 10px; font-size: 17px; color: var(--edsm-muted); }
+
+        .field-wrap { position: relative; }
+        .field-wrap + .field-wrap { margin-top: 18px; }
         .field {
-            border: 1.5px solid #DCE6F2;
+            width: 100%;
+            height: 54px;
+            padding: 0 52px 0 16px;
+            border: 1.5px solid var(--edsm-line);
             background: #fff;
-            border-radius: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            color: var(--edsm-text);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
+        .field::placeholder { color: #8396AF; }
         .field:focus { outline: none; border-color: var(--edsm-blue); box-shadow: 0 0 0 4px rgba(11, 94, 215, 0.12); }
-        .field-icon { position: absolute; inset-inline-start: 16px; top: 50%; transform: translateY(-50%); color: #64748B; pointer-events: none; font-size: 17px; }
+        .field-icon { position: absolute; right: 17px; top: 50%; width: 21px; height: 21px; transform: translateY(-50%); color: #7C97B3; pointer-events: none; }
+        .field:focus ~ .field-icon { color: var(--edsm-blue); }
+
+        .remember { display: inline-flex; align-items: center; gap: 10px; margin-top: 24px; font-size: 15px; color: #748EB0; cursor: pointer; user-select: none; }
+        .remember input {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            border: 1.5px solid #9CB2CA;
+            border-radius: 4px;
+            background: #fff center / 12px no-repeat;
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .remember input:checked {
+            background-color: var(--edsm-blue);
+            border-color: var(--edsm-blue);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+        }
+        .remember input:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(11, 94, 215, 0.15); }
+
         .btn-brand {
-            background: linear-gradient(to left, var(--edsm-teal), var(--edsm-blue));
-            border-radius: 12px;
-            box-shadow: 0 12px 24px rgba(11, 94, 215, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            height: 52px;
+            margin-top: 26px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(to left, #16B8B0, #0A6DC0);
+            border-radius: 10px;
+            box-shadow: 0 12px 24px rgba(10, 109, 192, 0.2);
             transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
         }
-        .btn-brand:hover { transform: translateY(-1px); box-shadow: 0 16px 30px rgba(11, 94, 215, 0.3); filter: brightness(1.05); }
+        .btn-brand svg { width: 20px; height: 20px; stroke-width: 2.2; }
+        .btn-brand:hover { transform: translateY(-1px); box-shadow: 0 16px 30px rgba(10, 109, 192, 0.28); filter: brightness(1.05); }
         .btn-brand:active { transform: none; }
-        .demo summary { list-style: none; cursor: pointer; }
-        .demo summary::-webkit-details-marker { display: none; }
+        .btn-brand:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(11, 94, 215, 0.25); }
+
+        details summary { list-style: none; cursor: pointer; }
+        details summary::-webkit-details-marker { display: none; }
+        .forgot { margin-top: 26px; text-align: center; font-size: 14px; }
+        .forgot summary { display: inline-block; color: #036ECC; font-weight: 700; }
+        .forgot summary:hover { text-decoration: underline; }
+        .forgot p { margin-top: 10px; padding: 10px 14px; font-size: 13px; color: #365A84; background: #F2F7FD; border: 1px solid #E1EBF6; border-radius: 10px; }
+
+        .or-divider { display: flex; align-items: center; gap: 16px; margin: 30px 0 18px; font-size: 14px; font-weight: 700; color: #0E447A; }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: #DDE6EF; }
+        .btn-outline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            height: 47px;
+            border: 1.5px solid #D6E4F3;
+            border-radius: 10px;
+            color: #0C62C1;
+            font-size: 14px;
+            font-weight: 700;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .btn-outline svg { width: 19px; height: 19px; stroke-width: 2; }
+        .btn-outline:hover, .demo[open] .btn-outline { border-color: #B8D0EC; background: #F6FAFE; }
+        .demo-list { margin-top: 10px; padding: 12px; font-size: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; }
+        .demo-list div { display: flex; justify-content: space-between; align-items: center; }
+        .demo-list div + div { margin-top: 8px; }
+        .demo-list code { background: #fff; border: 1px solid #E2E8F0; padding: 3px 8px; border-radius: 8px; color: var(--edsm-text); }
+
+        .login-footer { margin-top: 56px; text-align: center; font-size: 12.5px; line-height: 20px; color: #91A5BC; }
+
         .fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+        @media (max-height: 860px) {
+            .login-card { padding-top: 34px; padding-bottom: 34px; }
+            .card-head { margin: 30px 0 26px; }
+            .remember, .btn-brand { margin-top: 18px; }
+            .forgot { margin-top: 18px; }
+            .or-divider { margin: 20px 0 14px; }
+            .login-footer { margin-top: 28px; }
+        }
+        @media (max-width: 1100px) {
+            .login-card { padding-left: 32px; padding-right: 32px; }
+        }
+        @media (max-width: 480px) {
+            .login-card { padding: 32px 22px; }
+            .card-logo img { width: 62px; }
+            .card-logo .wordmark { font-size: 40px; }
+            .card-head { margin: 32px 0 28px; }
+            .card-head h1 { font-size: 23px; }
+        }
     </style>
 </head>
 <body class="min-h-screen">
     <div class="min-h-screen grid md:grid-cols-2">
         <!-- Form side (right in RTL) -->
-        <main class="form-side flex flex-col items-center justify-center px-5 py-10 md:px-10">
-            <div class="login-card w-full max-w-md p-8 sm:p-12 fade-in relative">
+        <main class="form-side flex flex-col items-center justify-center px-4 py-10 md:px-10">
+            <div class="login-card fade-in">
                 <!-- Logo -->
-                <div class="flex items-center justify-center gap-3 mb-8" dir="ltr">
-                    <img src="assets/img/edsm-icon.png" alt="" class="w-16 h-auto">
+                <div class="card-logo" dir="ltr">
+                    <img src="assets/img/edsm-icon.png" alt="">
                     <div>
-                        <div class="wordmark text-4xl">EDS<span>M</span></div>
-                        <div class="wordmark-sub text-[10px] mt-1">Dental Clinic Management System</div>
+                        <div class="wordmark">EDS<span>M</span></div>
+                        <div class="wordmark-sub">Dental Clinic Management System</div>
                     </div>
                 </div>
 
-                <div class="text-center mb-8">
-                    <h1 class="text-2xl font-extrabold text-gray-800 flex items-center justify-center gap-3">
-                        مرحباً بعودتك
-                        <i class="far fa-hand text-[#0B5ED7] text-2xl"></i>
-                    </h1>
-                    <p class="text-gray-500 mt-2">قم بتسجيل الدخول للمتابعة</p>
+                <div class="card-head">
+                    <h1><i class="far fa-hand" aria-hidden="true"></i>مرحباً بعودتك</h1>
+                    <p>قم بتسجيل الدخول للمتابعة</p>
                 </div>
 
                 <?php if (isset($_SESSION['error'])): ?>
@@ -163,51 +280,65 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                 <?php endif; ?>
 
-                <form action="auth/login.php" method="POST" class="space-y-4">
-                    <div class="relative">
+                <form id="loginForm" action="auth/login.php" method="POST">
+                    <div class="field-wrap">
                         <label for="username" class="sr-only">اسم المستخدم</label>
-                        <i class="far fa-user field-icon"></i>
                         <input type="text" id="username" name="username" required autocomplete="username" autofocus
-                               class="field w-full py-3.5 ps-12 pe-4 text-gray-800" placeholder="اسم المستخدم">
+                               class="field" placeholder="اسم المستخدم">
+                        <svg class="field-icon ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5.5 20.5v-1.5a4 4 0 0 1 4-4h5a4 4 0 0 1 4 4v1.5"/></svg>
                     </div>
 
-                    <div class="relative">
+                    <div class="field-wrap">
                         <label for="password" class="sr-only">كلمة المرور</label>
-                        <i class="fas fa-lock field-icon"></i>
                         <input type="password" id="password" name="password" required autocomplete="current-password"
-                               class="field w-full py-3.5 ps-12 pe-4 text-gray-800" placeholder="كلمة المرور">
+                               class="field" placeholder="كلمة المرور">
+                        <svg class="field-icon ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10.5" rx="2.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/><path d="M12 14.8v2"/></svg>
                     </div>
+
+                    <!-- يحفظ اسم المستخدم في هذا المتصفح فقط -->
+                    <label class="remember">
+                        <input type="checkbox" id="remember">
+                        <span>تذكرني</span>
+                    </label>
 
                     <!-- نوع الحساب يُحدَّد تلقائياً من قاعدة البيانات -->
-                    <button type="submit" class="btn-brand w-full py-3.5 px-4 text-white font-bold text-lg flex items-center justify-center gap-3 !mt-6">
-                        <i class="fas fa-arrow-right"></i>
+                    <button type="submit" class="btn-brand">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                         تسجيل الدخول
                     </button>
                 </form>
 
+                <details class="forgot">
+                    <summary>نسيت كلمة المرور؟</summary>
+                    <p>لإعادة تعيين كلمة المرور يرجى التواصل مع مدير النظام.</p>
+                </details>
+
+                <div class="or-divider">أو</div>
+
                 <!-- Demo Credentials (مطويّة) -->
-                <details class="demo mt-6 text-xs">
-                    <summary class="text-center text-[#0B5ED7] font-semibold hover:underline">
-                        <i class="fas fa-info-circle ml-1"></i>بيانات الدخول التجريبية
+                <details class="demo">
+                    <summary class="btn-outline">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1a4.5 4.5 0 0 1 4.5-4.5h4a4.5 4.5 0 0 1 4.5 4.5v1"/><path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.7a4.5 4.5 0 0 1 3 4.3v1"/></svg>
+                        بيانات الدخول التجريبية
                     </summary>
-                    <div class="mt-3 bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-                        <div class="flex justify-between items-center">
+                    <div class="demo-list">
+                        <div>
                             <span class="text-gray-600 font-medium">حساب الطبيب:</span>
-                            <code class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-gray-800" dir="ltr">doctor1 / password</code>
+                            <code dir="ltr">doctor1 / password</code>
                         </div>
-                        <div class="flex justify-between items-center">
+                        <div>
                             <span class="text-gray-600 font-medium">حساب الممرضة:</span>
-                            <code class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-gray-800" dir="ltr">nurse1 / password</code>
+                            <code dir="ltr">nurse1 / password</code>
                         </div>
-                        <div class="flex justify-between items-center">
+                        <div>
                             <span class="text-gray-600 font-medium">حساب الإدارة:</span>
-                            <code class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-gray-800" dir="ltr">admin / password</code>
+                            <code dir="ltr">admin / password</code>
                         </div>
                     </div>
                 </details>
             </div>
 
-            <footer class="text-center text-xs text-gray-400 mt-8 leading-6">
+            <footer class="login-footer">
                 <div class="latin" dir="ltr">© <?= date('Y') ?> EDSM - Dental Clinic Management System</div>
                 <div>جميع الحقوق محفوظة</div>
             </footer>
@@ -215,51 +346,90 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- Art panel (left in RTL) -->
         <aside class="art hidden md:block min-h-screen" aria-hidden="true">
-            <div class="art-photo"></div>
-            <svg class="art-wave" viewBox="0 0 800 280" preserveAspectRatio="none">
-                <defs>
-                    <linearGradient id="waveNavy" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stop-color="#0B5ED7"/>
-                        <stop offset="1" stop-color="#0A2A5E"/>
-                    </linearGradient>
-                    <linearGradient id="waveTeal" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0" stop-color="#14B8A6" stop-opacity="0.9"/>
-                        <stop offset="1" stop-color="#5EEAD4" stop-opacity="0.55"/>
-                    </linearGradient>
-                </defs>
-                <path d="M0,70 C170,20 330,150 520,120 C650,100 730,130 800,150 L800,280 L0,280 Z" fill="#0B5ED7" opacity="0.35"/>
-                <path d="M0,110 C190,60 340,190 540,160 C660,142 740,168 800,185 L800,280 L0,280 Z" fill="url(#waveTeal)"/>
-                <path d="M0,140 C200,95 350,215 560,190 C670,178 745,196 800,210 L800,280 L0,280 Z" fill="url(#waveNavy)"/>
-            </svg>
-
-            <div class="relative z-10 px-12 pt-16 lg:pt-24">
-                <!-- Logo -->
-                <div class="flex items-center justify-center gap-4" dir="ltr">
-                    <img src="assets/img/edsm-icon.png" alt="" class="w-28 lg:w-32 h-auto">
-                    <div>
-                        <div class="wordmark text-6xl lg:text-7xl">EDS<span>M</span></div>
-                        <div class="wordmark-sub text-base lg:text-lg mt-2">Dental Clinic Management System</div>
-                        <div class="flex items-center gap-3 mt-1" dir="rtl">
-                            <span class="brand-rule"></span>
-                            <span class="text-gray-500 text-base">برنامج إدارة عيادة الأسنان</span>
-                            <span class="brand-rule"></span>
+            <div class="art-head">
+                <div class="art-brand">
+                    <div class="art-lockup" dir="ltr">
+                        <img src="assets/img/edsm-icon.png" alt="">
+                        <div>
+                            <div class="wordmark">EDS<span>M</span></div>
+                            <div class="wordmark-sub">Dental Clinic Management System</div>
+                            <div class="art-ar">برنامج إدارة عيادة الأسنان</div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Tagline -->
-                <div class="mt-12 lg:mt-16 max-w-md mx-auto">
-                    <h2 class="tagline text-3xl lg:text-4xl font-bold leading-relaxed">إدارة أسهل ..<br>لابتسامات أكثر</h2>
-                    <div class="tagline-bar mt-4"></div>
+                    <div class="tagline">
+                        <h2>إدارة أسـهل ..<br>لابتسامات أكثر</h2>
+                        <div class="tagline-bar"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="art-features">
-                <div class="art-feature"><i class="fas fa-tooth"></i><span>إدارة متكاملة<br>للعيادات</span></div>
-                <div class="art-feature"><i class="fas fa-cloud"></i><span>وصول من أي مكان<br>وفي أي وقت</span></div>
-                <div class="art-feature"><i class="fas fa-shield-alt"></i><span>أمان عالي<br>لبياناتك</span></div>
+            <!-- الصورة والأمواج بإحداثيات التصميم (788×542 أسفل اللوحة) -->
+            <div class="art-scene">
+                <svg viewBox="0 0 788 542" preserveAspectRatio="xMidYMax slice">
+                    <defs>
+                        <linearGradient id="waveSky" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stop-color="#2F95D0" stop-opacity="0.95"/>
+                            <stop offset="0.3" stop-color="#6DBAE3" stop-opacity="0.85"/>
+                            <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.6"/>
+                            <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.45"/>
+                        </linearGradient>
+                        <linearGradient id="waveTeal" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stop-color="#5CCBCD"/>
+                            <stop offset="0.5" stop-color="#1FAFB3"/>
+                            <stop offset="1" stop-color="#0E8EA5"/>
+                        </linearGradient>
+                        <linearGradient id="waveNavy" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#135A94"/>
+                            <stop offset="1" stop-color="#0B4478"/>
+                        </linearGradient>
+                    </defs>
+                    <image href="assets/img/login-clinic.jpg" width="788" height="401" preserveAspectRatio="none"/>
+                    <path fill="url(#waveSky)" d="M0,218 C140,198 240,272 360,322 C480,372 640,382 788,382 L788,542 L0,542 Z"/>
+                    <path fill="url(#waveTeal)" d="M150,332 C300,322 420,362 560,392 C660,412 740,407 788,404 L788,542 L0,542 Z"/>
+                    <path fill="url(#waveNavy)" d="M0,303 C130,292 250,330 390,383 C500,420 620,430 788,498 L788,542 L0,542 Z"/>
+                </svg>
+
+                <div class="art-features">
+                    <div class="art-feature">
+                        <span>إدارة متكاملة<br>لعيادتك</span>
+                        <svg class="ico" viewBox="0 0 24 24"><path d="M12 5.5c-1.07-.59-2.58-1.5-4-1.5-2.1 0-4 1.25-4 5 0 4.9 1.06 8.41 2.67 10.54.57.75 2.37.09 2.83-1.02l.67-1.98c.31-.94 1.01-1.54 1.83-1.54s1.52.6 1.83 1.54l.67 1.98c.46 1.11 2.26 1.78 2.83 1.02C18.94 17.41 20 13.9 20 9c0-3.77-1.9-5-4-5-1.42 0-2.93.91-4 1.5z"/><path d="M12 5.5l3 1.5"/></svg>
+                    </div>
+                    <div class="art-feature">
+                        <span>وصول من أي مكان<br>وفي أي وقت</span>
+                        <svg class="ico" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                    </div>
+                    <div class="art-feature">
+                        <span>أمان عالي<br>لبياناتك</span>
+                        <svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.8-3.4 8-8 9-4.6-1-8-4.2-8-9V6l8-3z"/></svg>
+                    </div>
+                </div>
             </div>
         </aside>
     </div>
+
+    <script>
+        // تذكرني: حفظ اسم المستخدم في هذا المتصفح فقط (كلمة المرور لا تُحفظ)
+        (function () {
+            var key = 'edsm_login_username';
+            var form = document.getElementById('loginForm');
+            var username = document.getElementById('username');
+            var remember = document.getElementById('remember');
+            try {
+                var saved = localStorage.getItem(key);
+                if (saved) {
+                    username.value = saved;
+                    remember.checked = true;
+                    document.getElementById('password').focus();
+                }
+            } catch (e) {}
+            form.addEventListener('submit', function () {
+                try {
+                    if (remember.checked) localStorage.setItem(key, username.value.trim());
+                    else localStorage.removeItem(key);
+                } catch (e) {}
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -578,5 +578,21 @@ function formatSyrianCurrency($amount) {
 function formatSyrianCurrencyWithText($amount) {
     return number_format($amount, 0) . ' ليرة سورية';
 }
+
+// صورة رمزية للمريض حسب الجنس (ملف المريض ونموذج الإضافة)
+// $clipId يجب أن يكون فريداً إذا عُرضت أكثر من صورة في الصفحة نفسها
+function patientAvatarSvg($gender, $clipId = 'pfAvatarClip') {
+    $hair = $gender === 'female'
+        ? '<path d="M24 54c0-20 10-35 24-35s24 15 24 35v30H24z" fill="#3A2A22"/>'
+        : '';
+    $front = $gender === 'female'
+        ? '<path d="M32 46c1-13 8-20 16-20 10 0 17 8 17 19-8-1-15-4-19-10-3 6-8 9-14 11z" fill="#3A2A22"/>'
+        : '<path d="M32 45c-1-12 6-20 16-20s17 7 16 19c-3-5-8-8-16-8s-13 4-16 9z" fill="#2F2A26"/>';
+    return '<svg viewBox="0 0 96 96" aria-hidden="true"><defs><clipPath id="' . $clipId . '"><circle cx="48" cy="48" r="48"/></clipPath></defs>'
+         . '<g clip-path="url(#' . $clipId . ')"><rect width="96" height="96" fill="#D9EAFB"/>' . $hair
+         . '<path d="M12 96c3-15 17-23 36-23s33 8 36 23z" fill="#3E86CF"/>'
+         . '<rect x="42" y="58" width="12" height="14" rx="4" fill="#EDBB9A"/>'
+         . '<ellipse cx="48" cy="46" rx="15" ry="17.5" fill="#F6D2B8"/>' . $front . '</g></svg>';
+}
   
 ?>

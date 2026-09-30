@@ -16,6 +16,13 @@ $success_message = '';
 $error_message = '';
 $doctor_id = $_SESSION['user_id'];
 
+// رسائل العودة من صفحة العلاج الجديد / إكمال العلاج
+if (!$_POST && isset($_GET['new_treatment'])) {
+    $success_message = 'تم حفظ العلاج بنجاح';
+} elseif (!$_POST && isset($_GET['completed'])) {
+    $success_message = 'تم إكمال العلاج بنجاح';
+}
+
 // جلب أنواع العلاجات من قاعدة البيانات
 $treatment_types_map = [];
 try {
