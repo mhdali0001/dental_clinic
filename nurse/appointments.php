@@ -64,6 +64,13 @@ if ($_POST && $action === 'add') {
     } catch (PDOException $e) {
         $error_message = "خطأ في حجز الموعد: " . $e->getMessage();
     }
+
+    // الطبيب يحجز من صفحة مواعيده: يعود إليها مع رسالة الخطأ بدل البقاء هنا
+    if ($error_message && $_SESSION['user_role'] === 'doctor' && isset($_GET['date'])) {
+        $_SESSION['appointments_error'] = $error_message;
+        header('Location: ../doctor/appointments.php?date=' . urlencode($_GET['date']));
+        exit;
+    }
 }
 
 // تأكيد موعد
@@ -159,6 +166,53 @@ $preselected_patient = $_GET['patient_id'] ?? null;
 
 // إغلاق نموذج الحجز: الطبيب يعود إلى جدول مواعيده
 $form_close_url = ($_SESSION['user_role'] === 'doctor' ? '../doctor/appointments.php' : '') . '?date=' . urlencode($selected_date);
+
+// ---------- بيانات صفحة حجز موعد (design/حجز موعد .jpg) ----------
+if ($action === 'add') {
+    $pageTitle = 'حجز موعد جديد';
+    $pageIcon = 'fas fa-calendar-plus';
+    $pageSubtitle = 'اختر المريض والإجراء، ثم اليوم والوقت المتاح';
+
+    // الأوقات المعروضة في شبكة الأوقات (نفس الأوقات المقترحة سابقاً)
+    $booking_slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+    $booking_types = ['فحص عام', 'تنظيف أسنان', 'حشو أسنان', 'علاج جذور', 'خلع أسنان', 'زراعة أسنان', 'تقويم أسنان', 'تبييض أسنان', 'أخرى'];
+    $booking_date = ($_POST['appointment_date'] ?? $selected_date) < $today ? $today : ($_POST['appointment_date'] ?? $selected_date);
+    $list_url = ($_SESSION['user_role'] === 'doctor' ? '../doctor/appointments.php' : 'appointments.php');
+
+    try {
+        // عدد المواعيد لكل يوم (لتلوين أيام التقويم)
+        $stmt = $pdo->prepare("
+            SELECT appointment_date, COUNT(*) FROM appointments
+            WHERE status != 'cancelled' AND appointment_date BETWEEN DATE_SUB(?, INTERVAL 40 DAY) AND DATE_ADD(?, INTERVAL 400 DAY)
+            GROUP BY appointment_date
+        ");
+        $stmt->execute([$today, $today]);
+        $booking_day_counts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        $stmt = $pdo->query("SELECT id, name, phone, age, medical_history, allergies FROM patients WHERE status = 'active' ORDER BY name");
+        $booking_patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("
+            SELECT a.id, a.patient_id, a.appointment_date, a.appointment_time, a.treatment_type, p.name AS patient_name
+            FROM appointments a JOIN patients p ON a.patient_id = p.id
+            WHERE a.appointment_date = ? AND a.status IN ('scheduled', 'confirmed')
+            ORDER BY a.appointment_time LIMIT 5
+        ");
+        $stmt->execute([$today]);
+        $booking_today = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->query("
+            SELECT a.id, a.appointment_date, a.appointment_time, a.treatment_type, a.status, a.created_at, p.name AS patient_name
+            FROM appointments a JOIN patients p ON a.patient_id = p.id
+            ORDER BY a.created_at DESC, a.id DESC LIMIT 5
+        ");
+        $booking_latest = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error_message = $error_message ?: "خطأ في قاعدة البيانات: " . $e->getMessage();
+        $booking_day_counts = [];
+        $booking_patients = $booking_today = $booking_latest = [];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -202,6 +256,162 @@ $form_close_url = ($_SESSION['user_role'] === 'doctor' ? '../doctor/appointments
             </div>
         <?php endif; ?>
 
+        <?php if ($action === 'add'): ?>
+        <!-- ================= حجز موعد جديد (design/حجز موعد .jpg) ================= -->
+        <form method="POST" id="bookingForm" novalidate>
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="appointment_date" id="bkDate" value="<?= htmlspecialchars($booking_date) ?>">
+            <input type="hidden" name="appointment_time" id="bkTime" value="<?= htmlspecialchars($_POST['appointment_time'] ?? '') ?>">
+
+            <div class="edsm-booking-grid">
+                <!-- العمود الأيمن: النموذج + مواعيد اليوم -->
+                <div class="edsm-booking-col">
+                    <div class="edsm-card bk-form fade-in">
+                        <div id="bkFormError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg mb-3"></div>
+
+                        <label for="bkPatientSearch" class="edsm-label">بحث عن مريض</label>
+                        <select name="patient_id" id="bkPatient" class="edsm-field">
+                            <option value="">اختر المريض...</option>
+                            <?php $picked = $_POST['patient_id'] ?? $preselected_patient; ?>
+                            <?php foreach ($booking_patients as $patient): ?>
+                                <option value="<?= $patient['id'] ?>" data-name="<?= htmlspecialchars($patient['name']) ?>"
+                                        data-phone="<?= htmlspecialchars($patient['phone'] ?? '') ?>" data-age="<?= htmlspecialchars($patient['age'] ?? '') ?>"
+                                        data-history="<?= htmlspecialchars($patient['medical_history'] ?? '') ?>" data-allergies="<?= htmlspecialchars($patient['allergies'] ?? '') ?>"
+                                        <?= (string)$picked === (string)$patient['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($patient['name']) ?> - <?= htmlspecialchars($patient['phone'] ?? '') ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <div class="edsm-label mt-4">اسم المريض</div>
+                        <div id="bkPatientInfo" class="edsm-picked is-empty">لم يتم اختيار مريض بعد</div>
+
+                        <label for="bkType" class="edsm-label mt-4">اختيار الإجراء</label>
+                        <select name="treatment_type" id="bkType" class="edsm-field">
+                            <option value="">اختر الإجراء</option>
+                            <?php foreach ($booking_types as $type): ?>
+                                <option value="<?= htmlspecialchars($type) ?>" <?= ($_POST['treatment_type'] ?? '') === $type ? 'selected' : '' ?>><?= htmlspecialchars($type) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <label for="bkDuration" class="edsm-label mt-4">المدة المتوقعة</label>
+                        <select name="estimated_duration" id="bkDuration" class="edsm-field">
+                            <?php foreach ([15, 30, 45, 60, 90, 120] as $minutes): ?>
+                                <option value="<?= $minutes ?>" <?= (int)($_POST['estimated_duration'] ?? 30) === $minutes ? 'selected' : '' ?>><?= $minutes ?> دقيقة</option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <label for="bkNotes" class="edsm-label mt-4">ملاحظات</label>
+                        <textarea name="notes" id="bkNotes" rows="3" class="edsm-field" style="height: auto; padding: 10px 12px;" placeholder="ملاحظات (اختياري)"><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
+
+                        <div class="edsm-booking-summary mt-4" id="bkSummary">
+                            <i class="far fa-calendar-check"></i>
+                            <span>اختر اليوم والوقت من التقويم وشبكة الأوقات</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <button type="submit" class="edsm-btn edsm-btn-navy edsm-btn-lg"><i class="fas fa-calendar-plus"></i> حجز الموعد</button>
+                            <a href="<?= htmlspecialchars($form_close_url) ?>" class="edsm-btn edsm-btn-sky edsm-btn-lg">إلغاء</a>
+                        </div>
+                    </div>
+
+                    <div class="edsm-card bk-today fade-in">
+                        <div class="edsm-card-head" style="margin-bottom: 8px;">
+                            <h3 class="edsm-card-title"><i class="far fa-calendar-alt"></i> المواعيد القادمة اليوم</h3>
+                            <a href="<?= $list_url ?>?date=<?= $today ?>" class="edsm-link text-sm">عرض الكل <i class="fas fa-chevron-left text-xs"></i></a>
+                        </div>
+                        <?php if (empty($booking_today)): ?>
+                            <p class="text-sm text-gray-500 py-3 text-center">لا توجد مواعيد متبقية اليوم</p>
+                        <?php else: ?>
+                            <div class="divide-y divide-gray-100">
+                                <?php foreach ($booking_today as $row): ?>
+                                    <div class="edsm-upcoming">
+                                        <span class="edsm-avatar-soft"><i class="far fa-calendar-alt"></i></span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="edsm-row-title block"><?= htmlspecialchars($row['patient_name']) ?></span>
+                                            <span class="edsm-row-meta block"><span class="edsm-num"><?= date('d/m/Y', strtotime($row['appointment_date'])) ?> · <?= date('H:i', strtotime($row['appointment_time'])) ?></span> · <?= htmlspecialchars($row['treatment_type']) ?></span>
+                                        </span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                        <a href="patients.php?action=add" class="edsm-btn edsm-btn-pink edsm-btn-lg w-full mt-3"><i class="fas fa-user-plus"></i> إضافة مريض جديد</a>
+                    </div>
+                </div>
+
+                <!-- العمود الأيسر: التقويم + شبكة الأوقات -->
+                <div class="edsm-booking-col">
+                    <div class="edsm-card bk-cal fade-in">
+                        <div class="edsm-bcal-head">
+                            <button type="button" class="edsm-bcal-nav" id="bkPrevMonth" aria-label="الشهر السابق"><i class="fas fa-chevron-right"></i></button>
+                            <strong id="bkMonthTitle"></strong>
+                            <button type="button" class="edsm-bcal-nav" id="bkNextMonth" aria-label="الشهر التالي"><i class="fas fa-chevron-left"></i></button>
+                        </div>
+                        <div class="edsm-bcal-grid" id="bkCalendar"></div>
+                        <div class="flex flex-wrap gap-4 mt-3 text-xs text-gray-500">
+                            <span><span class="edsm-legend is-selected"></span> اليوم المختار</span>
+                            <span><span class="edsm-legend is-busy"></span> يوم فيه مواعيد</span>
+                        </div>
+                    </div>
+
+                    <div class="edsm-card bk-slots fade-in">
+                        <div class="edsm-card-head" style="margin-bottom: 12px;">
+                            <h3 class="edsm-card-title"><i class="far fa-clock"></i> شبكة الأوقات المتاحة</h3>
+                            <a href="#" id="bkDayListLink" class="edsm-link text-sm">عرض الكل <i class="fas fa-chevron-left text-xs"></i></a>
+                        </div>
+                        <div class="edsm-slot-grid" id="bkSlots"></div>
+                        <div class="flex flex-wrap items-center gap-3 mt-4">
+                            <label for="bkCustomTime" class="text-sm font-bold text-gray-700">أو وقت آخر:</label>
+                            <input type="time" id="bkCustomTime" class="edsm-field" style="width: 150px; height: 38px;">
+                            <span class="text-xs text-gray-500"><span class="edsm-legend is-free"></span> متوفر &nbsp; <span class="edsm-legend is-booked"></span> محجوز</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- أحدث المواعيد التي تم حجزها -->
+        <div class="edsm-card mt-6 fade-in">
+            <div class="edsm-card-head">
+                <h3 class="edsm-card-title"><i class="fas fa-chart-bar"></i> أحدث المواعيد التي تم حجزها</h3>
+                <a href="<?= $list_url ?>" class="edsm-link text-sm">عرض الكل <i class="fas fa-chevron-left text-xs"></i></a>
+            </div>
+            <?php if (empty($booking_latest)): ?>
+                <p class="text-sm text-gray-500 py-3">لا توجد مواعيد محجوزة بعد</p>
+            <?php else: ?>
+                <div class="edsm-table-wrap">
+                    <table class="edsm-table">
+                        <thead>
+                            <tr><th>المريض</th><th>الإجراء</th><th>التاريخ</th><th>الوقت</th><th class="text-center">عرض</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($booking_latest as $row): ?>
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center gap-3">
+                                            <span class="edsm-avatar-soft is-violet"><i class="fas fa-tooth"></i></span>
+                                            <div>
+                                                <div class="font-bold text-gray-800"><?= htmlspecialchars($row['patient_name']) ?></div>
+                                                <?php if ($row['created_at']): ?>
+                                                    <div class="text-xs text-gray-500">حُجز <span class="edsm-num"><?= date('d/m/Y H:i', strtotime($row['created_at'])) ?></span></div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="font-bold text-gray-700"><?= htmlspecialchars($row['treatment_type']) ?></td>
+                                    <td class="edsm-num"><?= date('d/m/Y', strtotime($row['appointment_date'])) ?></td>
+                                    <td class="edsm-num font-bold"><?= date('H:i', strtotime($row['appointment_time'])) ?></td>
+                                    <td class="text-center">
+                                        <a href="<?= $list_url ?>?date=<?= $row['appointment_date'] ?>" class="edsm-btn"><i class="fas fa-eye"></i> عرض</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php else: ?>
         <!-- Date Filter and Actions -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -262,149 +472,6 @@ $form_close_url = ($_SESSION['user_role'] === 'doctor' ? '../doctor/appointments
                 <div class="text-sm text-red-600">ملغي</div>
             </div>
         </div>
-
-        <!-- Add Appointment Form -->
-        <?php if ($action === 'add'): ?>
-            <div class="bg-white rounded-lg shadow-lg p-8 mb-8 fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-calendar-plus text-green-600 ml-2"></i>
-                        حجز موعد جديد
-                    </h3>
-                    <a href="<?= $form_close_url ?>" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-2xl"></i>
-                    </a>
-                </div>
-                
-                <form method="POST" class="space-y-6">
-                    <input type="hidden" name="action" value="add">
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Patient Selection -->
-                        <div class="md:col-span-2">
-                            <label class="block text-gray-700 font-semibold mb-2">المريض *</label>
-                            <div class="relative">
-                                <input type="text"
-                                       id="patient_search"
-                                       placeholder="ابحث عن المريض بالاسم أو رقم الهاتف..."
-                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                       autocomplete="off">
-                                <input type="hidden" name="patient_id" id="selected_patient_id" required>
-                                <div id="patient_dropdown" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
-                                    <?php foreach ($patients_list as $patient): ?>
-                                        <div class="patient-option cursor-pointer p-3 hover:bg-gray-100 border-b border-gray-100"
-                                             data-id="<?= $patient['id'] ?>"
-                                             data-name="<?= htmlspecialchars($patient['name']) ?>"
-                                             data-phone="<?= $patient['phone'] ?>">
-                                            <div class="font-medium text-gray-900"><?= htmlspecialchars($patient['name']) ?></div>
-                                            <div class="text-sm text-gray-600"><?= $patient['phone'] ?></div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                            <div id="selected_patient_info" class="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg hidden">
-                                <div class="text-sm text-green-800">
-                                    <i class="fas fa-user ml-1"></i>
-                                    <span id="selected_patient_display"></span>
-                                    <button type="button" onclick="clearPatientSelection()" class="mr-2 text-red-600 hover:text-red-800">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <?php if (empty($patients_list)): ?>
-                                <p class="text-red-600 text-sm mt-1">
-                                    لا توجد مرضى مسجلين.
-                                    <a href="patients.php?action=add" class="underline">إضافة مريض جديد</a>
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <!-- Date -->
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">التاريخ *</label>
-                            <input type="date" name="appointment_date" value="<?= $selected_date ?>" required min="<?= $today ?>"
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                        </div>
-                        
-                        <!-- Time -->
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">الوقت *</label>
-                            <input type="time" name="appointment_time" value="<?= date('H:i') ?>" required 
-                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                        </div>
-                        
-                        <!-- Treatment Type -->
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">نوع العلاج *</label>
-                            <select name="treatment_type" required 
-                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="">اختر نوع العلاج</option>
-                                <option value="فحص عام">فحص عام</option>
-                                <option value="تنظيف أسنان">تنظيف أسنان</option>
-                                <option value="حشو أسنان">حشو أسنان</option>
-                                <option value="علاج جذور">علاج جذور</option>
-                                <option value="خلع أسنان">خلع أسنان</option>
-                                <option value="زراعة أسنان">زراعة أسنان</option>
-                                <option value="تقويم أسنان">تقويم أسنان</option>
-                                <option value="تبييض أسنان">تبييض أسنان</option>
-                                <option value="أخرى">أخرى</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Duration -->
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">المدة المتوقعة (دقيقة)</label>
-                            <select name="estimated_duration" 
-                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="15">15 دقيقة</option>
-                                <option value="30" selected>30 دقيقة</option>
-                                <option value="45">45 دقيقة</option>
-                                <option value="60">60 دقيقة</option>
-                                <option value="90">90 دقيقة</option>
-                                <option value="120">120 دقيقة</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <!-- Notes -->
-                    <div>
-                        <label class="block text-gray-700 font-semibold mb-2">ملاحظات</label>
-                        <textarea name="notes" rows="3"
-                                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                  placeholder="أي ملاحظات خاصة بالموعد..."></textarea>
-                    </div>
-                    
-                    <!-- Suggested Time Slots -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 class="font-semibold text-blue-800 mb-3">أوقات مقترحة متاحة:</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <?php
-                            $suggested_times = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
-                            foreach ($suggested_times as $time): 
-                            ?>
-                                <button type="button" onclick="selectTime('<?= $time ?>')" 
-                                        class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded transition">
-                                    <?= date('h:i A', strtotime($time)) ?>
-                                </button>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Submit Buttons -->
-                    <div class="flex space-x-4 space-x-reverse pt-4">
-                        <button type="submit" 
-                                class="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-                            <i class="fas fa-calendar-plus ml-2"></i>
-                            حجز الموعد
-                        </button>
-                        <a href="<?= $form_close_url ?>" 
-                           class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 px-4 rounded-lg transition duration-200 text-center">
-                            إلغاء
-                        </a>
-                    </div>
-                </form>
-            </div>
-        <?php endif; ?>
 
         <!-- Appointments List -->
         <div class="bg-white rounded-lg shadow-lg overflow-hidden fade-in">
@@ -543,124 +610,181 @@ $form_close_url = ($_SESSION['user_role'] === 'doctor' ? '../doctor/appointments
                 <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
+    <?php if ($action === 'add'): ?>
+    <script src="../assets/js/patient-search.js"></script>
     <script>
-        // Function to select time
-        function selectTime(time) {
-            document.querySelector('input[name="appointment_time"]').value = time;
+    (function () {
+        const SLOTS = <?= json_encode($booking_slots) ?>;
+        const DAY_COUNTS = <?= json_encode($booking_day_counts, JSON_FORCE_OBJECT) ?>;
+        const LIST_URL = <?= json_encode($list_url) ?>;
+        const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const WEEK_HEAD = ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'];
+
+        const pad = n => String(n).padStart(2, '0');
+        const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+        const now = new Date();
+        const TODAY = iso(now);
+        const nowTime = pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+        const dateInput = document.getElementById('bkDate');
+        const timeInput = document.getElementById('bkTime');
+        const customTime = document.getElementById('bkCustomTime');
+        const calendarEl = document.getElementById('bkCalendar');
+        const slotsEl = document.getElementById('bkSlots');
+        const summaryEl = document.getElementById('bkSummary');
+        const errorEl = document.getElementById('bkFormError');
+
+        if (!dateInput.value || dateInput.value < TODAY) dateInput.value = TODAY;
+        let view = parse(dateInput.value);
+        view.setDate(1);
+        let booked = {}; // HH:MM -> patient name (للتاريخ المختار)
+
+        // ---------- المريض ----------
+        const patientSelect = document.getElementById('bkPatient');
+        const infoEl = document.getElementById('bkPatientInfo');
+        const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        function showPatient() {
+            const o = patientSelect.value ? patientSelect.options[patientSelect.selectedIndex] : null;
+            if (!o) { infoEl.className = 'edsm-picked is-empty'; infoEl.textContent = 'لم يتم اختيار مريض بعد'; return; }
+            let html = '<strong>' + esc(o.dataset.name) + '</strong>';
+            const meta = [o.dataset.phone, o.dataset.age ? o.dataset.age + ' سنة' : ''].filter(Boolean).join(' · ');
+            if (meta) html += '<span class="edsm-num">' + esc(meta) + '</span>';
+            if (o.dataset.history) html += '<em class="is-alert"><i class="fas fa-heartbeat"></i> ' + esc(o.dataset.history) + '</em>';
+            if (o.dataset.allergies) html += '<em class="is-alert"><i class="fas fa-allergies"></i> حساسية: ' + esc(o.dataset.allergies) + '</em>';
+            infoEl.className = 'edsm-picked';
+            infoEl.innerHTML = html;
         }
+        patientSelect.addEventListener('change', showPatient);
+        const search = PatientSearch.attach(patientSelect, { inputId: 'bkPatientSearch', placeholder: 'بحث عن مريض بالاسم أو الهاتف', inputClass: 'edsm-field edsm-field-search' });
+        showPatient();
+        // على الشاشات الكبيرة فقط: على الجوال تفتح القائمة ولوحة المفاتيح فوق النموذج
+        if (!patientSelect.value && window.matchMedia('(min-width: 1024px)').matches) search.input.focus();
 
-        // Patient search functionality
-        const patientSearch = document.getElementById('patient_search');
-        const patientDropdown = document.getElementById('patient_dropdown');
-        const selectedPatientId = document.getElementById('selected_patient_id');
-        const selectedPatientInfo = document.getElementById('selected_patient_info');
-        const selectedPatientDisplay = document.getElementById('selected_patient_display');
-        const patientOptions = document.querySelectorAll('.patient-option');
-
-        // Auto-focus on patient search if form is visible
-        if (patientSearch) {
-            patientSearch.focus();
-
-            // Handle preselected patient
-            <?php if ($preselected_patient): ?>
-                const preselectedOption = document.querySelector(`[data-id="<?= $preselected_patient ?>"]`);
-                if (preselectedOption) {
-                    selectPatient(preselectedOption);
-                }
-            <?php endif; ?>
-        }
-
-        // Patient search input handler
-        patientSearch?.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            let hasVisibleOptions = false;
-
-            patientOptions.forEach(option => {
-                const name = option.dataset.name.toLowerCase();
-                const phone = option.dataset.phone.toLowerCase();
-
-                if (name.includes(searchTerm) || phone.includes(searchTerm)) {
-                    option.style.display = 'block';
-                    hasVisibleOptions = true;
-                } else {
-                    option.style.display = 'none';
-                }
-            });
-
-            // Show/hide dropdown
-            if (searchTerm && hasVisibleOptions) {
-                patientDropdown.classList.remove('hidden');
-            } else {
-                patientDropdown.classList.add('hidden');
+        // ---------- التقويم ----------
+        function renderCalendar() {
+            document.getElementById('bkMonthTitle').textContent = MONTHS[view.getMonth()] + ' ' + view.getFullYear();
+            const first = new Date(view);
+            const offset = (first.getDay() + 1) % 7; // السبت أول الأسبوع
+            first.setDate(first.getDate() - offset);
+            let html = WEEK_HEAD.map(d => '<span class="edsm-bcal-dow">' + d + '</span>').join('');
+            for (let i = 0; i < 42; i++) {
+                const d = new Date(first); d.setDate(first.getDate() + i);
+                if (i === 35 && d.getMonth() !== view.getMonth()) break;
+                const key = iso(d);
+                const cls = ['edsm-bcal-day'];
+                if (d.getMonth() !== view.getMonth()) cls.push('is-other');
+                if (key < TODAY) cls.push('is-past');
+                if (key === TODAY) cls.push('is-today');
+                if (DAY_COUNTS[key]) cls.push('is-busy');
+                if (key === dateInput.value) cls.push('is-selected');
+                const title = DAY_COUNTS[key] ? DAY_COUNTS[key] + ' موعد' : '';
+                html += '<button type="button" class="' + cls.join(' ') + '" data-date="' + key + '"' + (key < TODAY ? ' disabled' : '') + ' title="' + title + '"><span class="edsm-num">' + d.getDate() + '</span></button>';
             }
+            calendarEl.innerHTML = html;
+            // لا عودة لأشهر ماضية
+            document.getElementById('bkPrevMonth').disabled = view.getFullYear() * 12 + view.getMonth() <= now.getFullYear() * 12 + now.getMonth();
+        }
+        calendarEl.addEventListener('click', e => {
+            const btn = e.target.closest('.edsm-bcal-day');
+            if (!btn || btn.disabled) return;
+            selectDate(btn.dataset.date);
         });
+        document.getElementById('bkPrevMonth').addEventListener('click', () => { view.setMonth(view.getMonth() - 1); renderCalendar(); });
+        document.getElementById('bkNextMonth').addEventListener('click', () => { view.setMonth(view.getMonth() + 1); renderCalendar(); });
 
-        // Show dropdown on focus
-        patientSearch?.addEventListener('focus', function() {
-            if (this.value && !selectedPatientId.value) {
-                patientDropdown.classList.remove('hidden');
-            }
-        });
-
-        // Hide dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('#patient_search') && !e.target.closest('#patient_dropdown')) {
-                patientDropdown?.classList.add('hidden');
-            }
-        });
-
-        // Handle patient selection
-        patientOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                selectPatient(this);
-            });
-        });
-
-        function selectPatient(option) {
-            const id = option.dataset.id;
-            const name = option.dataset.name;
-            const phone = option.dataset.phone;
-
-            selectedPatientId.value = id;
-            patientSearch.value = '';
-            selectedPatientDisplay.textContent = `${name} - ${phone}`;
-            selectedPatientInfo.classList.remove('hidden');
-            patientDropdown.classList.add('hidden');
+        function selectDate(key) {
+            if (dateInput.value !== key) timeInput.value = '';
+            dateInput.value = key;
+            const d = parse(key);
+            if (d.getMonth() !== view.getMonth() || d.getFullYear() !== view.getFullYear()) { view = new Date(d.getFullYear(), d.getMonth(), 1); }
+            renderCalendar();
+            loadSlots();
         }
 
-        function clearPatientSelection() {
-            selectedPatientId.value = '';
-            patientSearch.value = '';
-            selectedPatientInfo.classList.add('hidden');
-            patientSearch.focus();
+        // ---------- شبكة الأوقات ----------
+        async function loadSlots() {
+            const day = dateInput.value;
+            document.getElementById('bkDayListLink').href = LIST_URL + '?date=' + day;
+            slotsEl.innerHTML = '<div class="edsm-slot-loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الأوقات...</div>';
+            booked = {};
+            try {
+                const res = await fetch('../api/appointments.php?date=' + encodeURIComponent(day));
+                const data = await res.json();
+                if (dateInput.value !== day) return; // تغيّر اليوم أثناء التحميل
+                (data.appointments || []).forEach(a => {
+                    if (a.status !== 'cancelled') booked[String(a.appointment_time).slice(0, 5)] = a.patient_name;
+                });
+            } catch (err) { /* تبقى الشبكة دون حالات الحجز */ }
+            renderSlots();
         }
 
-        // Form validation
-        const form = document.querySelector('form[method="POST"]');
-        form?.addEventListener('submit', function(e) {
-            const patientId = selectedPatientId?.value || this.querySelector('input[name="patient_id"]')?.value;
-            const appointmentDate = this.querySelector('input[name="appointment_date"]').value;
-            const appointmentTime = this.querySelector('input[name="appointment_time"]').value;
-            const treatmentType = this.querySelector('select[name="treatment_type"]').value;
-
-            if (!patientId || !appointmentDate || !appointmentTime || !treatmentType) {
-                e.preventDefault();
-                alert('يرجى ملء جميع الحقول المطلوبة');
+        function renderSlots() {
+            const day = dateInput.value;
+            const times = Array.from(new Set([...SLOTS, ...Object.keys(booked)])).sort();
+            slotsEl.innerHTML = times.map(t => {
+                const isBooked = !!booked[t];
+                const isPast = day === TODAY && t <= nowTime;
+                const cls = ['edsm-slot', isBooked ? 'is-booked' : (isPast ? 'is-past' : 'is-free')];
+                if (timeInput.value === t && !isBooked) cls.push('is-selected');
+                const label = isBooked ? 'محجوز' : (isPast ? 'انتهى' : 'متوفر');
+                const title = isBooked ? ' title="' + esc(booked[t]) + '"' : '';
+                return '<button type="button" class="' + cls.join(' ') + '" data-time="' + t + '"' + (isBooked || isPast ? ' disabled' : '') + title + '>' +
+                       '<span class="edsm-num">' + t + '</span><small>' + label + '</small></button>';
+            }).join('');
+            customTime.value = timeInput.value && !SLOTS.includes(timeInput.value) ? timeInput.value : '';
+            updateSummary();
+        }
+        slotsEl.addEventListener('click', e => {
+            const btn = e.target.closest('.edsm-slot');
+            if (!btn || btn.disabled) return;
+            timeInput.value = btn.dataset.time;
+            hideError();
+            renderSlots();
+        });
+        customTime.addEventListener('change', () => {
+            const t = customTime.value;
+            if (booked[t]) {
+                timeInput.value = '';
+                renderSlots();
+                showError('هذا الوقت محجوز لمريض آخر، اختر وقتاً آخر');
                 return;
             }
-
-            // Check if appointment is in the past
-            const appointmentDateTime = new Date(appointmentDate + 'T' + appointmentTime);
-            const now = new Date();
-
-            if (appointmentDateTime < now) {
-                e.preventDefault();
-                alert('لا يمكن حجز موعد في الماضي');
-                return;
-            }
+            timeInput.value = t;
+            hideError();
+            renderSlots();
         });
+
+        function updateSummary() {
+            const d = parse(dateInput.value);
+            const dateText = DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+            summaryEl.classList.toggle('is-ready', !!timeInput.value);
+            summaryEl.querySelector('span').innerHTML = timeInput.value
+                ? 'الموعد: <strong>' + dateText + '</strong> الساعة <strong class="edsm-num">' + timeInput.value + '</strong>'
+                : 'اليوم: <strong>' + dateText + '</strong> — اختر الوقت من شبكة الأوقات';
+        }
+
+        // ---------- التحقق قبل الإرسال ----------
+        function showError(msg) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); errorEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+        function hideError() { errorEl.classList.add('hidden'); }
+        document.getElementById('bookingForm').addEventListener('submit', e => {
+            let msg = '';
+            if (!patientSelect.value) msg = 'يرجى اختيار المريض';
+            else if (!document.getElementById('bkType').value) msg = 'يرجى اختيار الإجراء';
+            else if (!timeInput.value) msg = 'يرجى اختيار وقت الموعد من شبكة الأوقات';
+            else if (booked[timeInput.value]) msg = 'هذا الوقت محجوز لمريض آخر، اختر وقتاً آخر';
+            else if (dateInput.value === TODAY && timeInput.value <= nowTime) msg = 'لا يمكن حجز موعد في وقت مضى';
+            if (msg) { e.preventDefault(); showError(msg); }
+        });
+
+        renderCalendar();
+        loadSlots();
+    })();
     </script>
+    <?php endif; ?>
 </body>
 </html>

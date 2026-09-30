@@ -614,6 +614,729 @@ input:focus, select:focus, textarea:focus { outline: none; }
 .edsm-toast-teal { background: var(--edsm-teal-600); }
 @keyframes edsmToastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
+/* ---------- forms (design/مواعيد.jpg) ---------- */
+.edsm-label { display: block; font-size: 13.5px; font-weight: 700; color: #1F2937; margin-bottom: 6px; }
+.edsm-field {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #D5DEE9;
+    border-radius: 9px;
+    background: #fff;
+    color: #1F2937;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+select.edsm-field {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-left: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 14px;
+    background-position: left 12px center;
+}
+.edsm-field:focus { border-color: #0B7CF0; box-shadow: 0 0 0 3px rgba(11, 124, 240, 0.12); }
+.edsm-field-search { padding-right: 40px; padding-left: 36px; }
+
+/* ---------- tabs ---------- */
+.edsm-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    padding: 0 18px;
+    border-bottom: 1px solid #E6EDF5;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.edsm-tabs::-webkit-scrollbar { display: none; }
+@media (max-width: 640px) {
+    .edsm-tabs { padding: 0 8px; gap: 0; }
+    .edsm-tabs a { padding: 14px 9px; font-size: 14px; gap: 6px; }
+    .edsm-tabs a.edsm-tabs-action { padding: 8px 11px; font-size: 13px; }
+    .edsm-tabs-action-text { display: none; }
+}
+.edsm-tabs a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 14px;
+    font-weight: 700;
+    font-size: 15px;
+    color: #475569;
+    white-space: nowrap;
+}
+.edsm-tabs a i { color: #64748B; }
+.edsm-tabs a:hover { color: #0B7CF0; }
+.edsm-tabs a.active { color: #0B7CF0; }
+.edsm-tabs a.active i { color: #0B7CF0; }
+.edsm-tabs a.active::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 3px;
+    background: #0A7FEA;
+}
+.edsm-tabs a.edsm-tabs-action {
+    margin-inline-start: auto;
+    align-self: center;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #0B7CF0;
+    color: #fff;
+    font-size: 13.5px;
+}
+.edsm-tabs a.edsm-tabs-action i { color: #fff; }
+.edsm-tabs a.edsm-tabs-action:hover { background: #0A64C8; color: #fff; }
+
+/* ---------- table ---------- */
+.edsm-table-wrap { border: 1px solid #E6EDF5; border-radius: 12px; overflow-x: auto; }
+.edsm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.edsm-table th {
+    background: #F3F6FA;
+    color: #1F2937;
+    font-weight: 700;
+    text-align: start;
+    padding: 12px 14px;
+    white-space: nowrap;
+    border-bottom: 1px solid #E6EDF5;
+}
+.edsm-table td { padding: 10px 14px; border-bottom: 1px solid #EEF2F7; color: #334155; vertical-align: middle; }
+.edsm-table tbody tr:last-child td { border-bottom: 0; }
+.edsm-table tbody tr:hover td { background: #F8FBFF; }
+
+/* status pills */
+.edsm-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.edsm-status-scheduled { background: #DCEBFF; color: #1D5FB8; }
+.edsm-status-confirmed { background: #DDF6E8; color: #15803D; }
+.edsm-status-completed { background: #D5F5F1; color: #0F766E; }
+.edsm-status-cancelled { background: #FDE2E2; color: #B91C1C; }
+.edsm-status-noshow    { background: #FEF3C7; color: #B45309; }
+
+/* icon-only row actions */
+.edsm-actions-cell { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.edsm-actions-cell form { display: inline-flex; }
+.edsm-icon-action {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background-color 0.2s ease;
+}
+.edsm-icon-action:hover { background: #EEF3F9; }
+.edsm-icon-action.is-blue { color: #0B3D78; }
+.edsm-icon-action.is-green { color: #16A34A; }
+.edsm-icon-action.is-red { color: #DC2626; }
+
+/* ---------- mini month calendar ---------- */
+.edsm-mini-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.edsm-mini-cal-head strong { font-size: 16px; color: #1F2937; }
+.edsm-mini-cal-nav {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    font-size: 12px;
+}
+.edsm-mini-cal-nav:hover { background: #EEF3F9; color: #0B7CF0; }
+.edsm-mini-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; text-align: center; }
+.edsm-mini-cal-dow { font-size: 12px; font-weight: 700; color: #64748B; padding: 4px 0; }
+.edsm-mini-cal-day {
+    position: relative;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1F2937;
+}
+.edsm-mini-cal-day:hover { background: #EEF3F9; }
+.edsm-mini-cal-day.is-other { color: #A0AEC0; font-weight: 500; }
+.edsm-mini-cal-day.is-today { box-shadow: inset 0 0 0 1.5px #0B7CF0; color: #0B7CF0; }
+.edsm-mini-cal-day.is-selected { background: #DCEBFF; color: #0B5ED7; }
+.edsm-mini-cal-day.has-appointments::after,
+.edsm-mini-cal-dot {
+    content: '';
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #14B8A6;
+}
+.edsm-mini-cal-day.has-appointments::after { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); }
+
+/* upcoming list rows */
+.edsm-upcoming { display: flex; align-items: center; gap: 12px; padding: 10px 2px; }
+.edsm-upcoming:hover .edsm-row-title { color: #0B7CF0; }
+.edsm-avatar-soft.is-teal { background: #DDF7F3; color: #0D9488; }
+
+/* ---------- month view ---------- */
+.edsm-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid #E6EDF5; border-radius: 12px; overflow: hidden; }
+.edsm-month-dow { background: #F3F6FA; font-weight: 700; font-size: 13px; text-align: center; padding: 10px 4px; border-bottom: 1px solid #E6EDF5; }
+.edsm-month-cell {
+    min-height: 104px;
+    padding: 6px;
+    border-bottom: 1px solid #EEF2F7;
+    border-inline-start: 1px solid #EEF2F7;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.edsm-month-cell:nth-child(7n + 8) { border-inline-start: 0; }
+.edsm-month-cell.is-other { background: #FAFBFD; }
+.edsm-month-cell.is-other .edsm-month-day { color: #A0AEC0; }
+.edsm-month-cell.is-selected { background: #F2F8FF; }
+.edsm-month-day {
+    align-self: flex-start;
+    min-width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: #1F2937;
+}
+.edsm-month-cell.is-today .edsm-month-day { background: #0B7CF0; color: #fff; }
+.edsm-month-chip {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.edsm-month-more { font-size: 11.5px; font-weight: 700; color: #0B7CF0; padding: 0 4px; }
+@media (max-width: 640px) {
+    .edsm-month-cell { min-height: 64px; padding: 3px; }
+    .edsm-month-chip { font-size: 0; padding: 0; height: 6px; } /* نقاط ملونة فقط على الجوال */
+    .edsm-month-dow { font-size: 11px; }
+}
+
+/* ---------- patients page (design/المرضى.jpg) ---------- */
+.edsm-page-head-actions { margin-inline-start: auto; flex: 0 1 400px; }
+.edsm-head-search { position: relative; }
+.edsm-head-search i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #64748B; }
+.edsm-head-search input {
+    width: 100%;
+    height: 44px;
+    padding: 0 44px 0 14px;
+    border: 1px solid #D5DEE9;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14.5px;
+    box-shadow: 0 2px 8px rgba(12, 53, 102, 0.04);
+}
+.edsm-head-search input:focus { outline: none; border-color: #0B7CF0; box-shadow: 0 0 0 3px rgba(11, 124, 240, 0.12); }
+@media (max-width: 767px) {
+    .edsm-page-head { flex-wrap: wrap; }
+    .edsm-page-head-actions { flex-basis: 100%; }
+}
+
+/* filter pills */
+.edsm-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.edsm-pills a {
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.edsm-pills a:hover { background: #EEF4FB; color: #0B7CF0; }
+.edsm-pills a.active { background: #DCEBFF; color: #0B5ED7; }
+
+/* summary card rows */
+.edsm-summary { display: flex; flex-direction: column; }
+.edsm-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 11px 2px;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #1F2937;
+    border-bottom: 1px solid #EEF2F7;
+}
+.edsm-summary-row:last-child { border-bottom: 0; }
+.edsm-summary-row strong { font-size: 16px; color: #1F2937; }
+.edsm-summary-row:hover span { color: #0B7CF0; }
+.edsm-avatar-soft.is-violet { background: #E4E7FB; color: #4F5BD5; }
+
+/* larger table rows + sortable headers */
+.edsm-table-lg td { padding: 13px 14px; }
+.edsm-sort { color: inherit; display: inline-flex; align-items: center; gap: 5px; }
+.edsm-sort i { font-size: 11px; color: #A0AEC0; }
+.edsm-sort:hover, .edsm-sort.is-active { color: #0B7CF0; }
+.edsm-sort.is-active i { color: #0B7CF0; }
+
+/* medical status circles */
+.edsm-med-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: help;
+}
+.edsm-med-icon.is-red { background: #FDE2E4; color: #E0404C; }
+.edsm-med-icon.is-violet { background: #F1E4FB; color: #A63FD8; }
+.edsm-med-icon.is-green { background: #D9F5EE; color: #0F9F7F; }
+
+/* pagination */
+.edsm-pagination { display: flex; align-items: center; gap: 4px; }
+.edsm-pagination a {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #334155;
+    border: 1px solid #E2EAF2;
+    background: #fff;
+}
+.edsm-pagination a:hover { border-color: #0B7CF0; color: #0B7CF0; }
+.edsm-pagination a.active { background: #0B7CF0; border-color: #0B7CF0; color: #fff; }
+.edsm-pagination a.is-disabled { pointer-events: none; opacity: 0.4; }
+
+/* ---------- booking page (design/حجز موعد .jpg) ---------- */
+/* عمودان على الشاشات الكبيرة؛ على الجوال: النموذج ثم التقويم ثم الأوقات ثم مواعيد اليوم */
+.edsm-booking-grid { display: flex; flex-direction: column; gap: 24px; }
+.edsm-booking-col { display: contents; }
+.edsm-booking-grid .bk-form { order: 1; }
+.edsm-booking-grid .bk-cal { order: 2; }
+.edsm-booking-grid .bk-slots { order: 3; }
+.edsm-booking-grid .bk-today { order: 4; }
+@media (min-width: 1024px) {
+    .edsm-booking-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+    .edsm-booking-col { display: flex; flex-direction: column; gap: 24px; }
+}
+
+.edsm-btn-navy { background: #173B67; } .edsm-btn-navy:hover { background: #0F2A4C; }
+.edsm-btn-sky { background: #5AA8EF; } .edsm-btn-sky:hover { background: #3E93E2; }
+.edsm-btn-pink { background: linear-gradient(to left, #EC4F8B, #DB3A7A); } .edsm-btn-pink:hover { background: linear-gradient(to left, #DB3A7A, #C92C6B); }
+
+/* selected patient box */
+.edsm-picked {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 42px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    background: #E4EEFB;
+    border: 1px solid #C8DBF4;
+    color: #1F2937;
+    font-size: 14px;
+}
+.edsm-picked strong { font-size: 15px; }
+.edsm-picked span { font-size: 12.5px; color: #475569; }
+.edsm-picked em { font-style: normal; font-size: 12.5px; }
+.edsm-picked em.is-alert { color: #B91C1C; }
+.edsm-picked.is-empty { color: #64748B; justify-content: center; }
+
+.edsm-booking-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: #F3F6FA;
+    border: 1px dashed #CBD5E1;
+    font-size: 13.5px;
+    color: #475569;
+}
+.edsm-booking-summary.is-ready { background: #ECFDF3; border: 1px solid #A7E3BE; color: #14532D; }
+.edsm-booking-summary i { font-size: 16px; }
+
+/* big month calendar */
+.edsm-bcal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.edsm-bcal-head strong { font-size: 21px; font-weight: 800; color: #1F2937; }
+.edsm-bcal-nav {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    border: 0;
+    background: #DCEAFB;
+    color: #173B67;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.edsm-bcal-nav:hover { background: #C7DDF8; }
+.edsm-bcal-nav:disabled { opacity: 0.35; cursor: default; }
+.edsm-bcal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.edsm-bcal-dow { text-align: center; font-size: 12.5px; font-weight: 700; color: #475569; padding: 4px 0 6px; }
+.edsm-bcal-day {
+    height: 44px;
+    border-radius: 9px;
+    border: 1px solid #E1E8F0;
+    background: #fff;
+    color: #1F2937;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.edsm-bcal-day:hover:not(:disabled) { border-color: #0B7CF0; }
+.edsm-bcal-day.is-other { background: #F3F5F8; color: #A0AEC0; border-color: #EDF0F4; }
+.edsm-bcal-day.is-past { background: #F7F8FA; color: #C1C9D3; cursor: not-allowed; }
+.edsm-bcal-day.is-busy { background: #D2E4FB; border-color: #B9D4F6; }
+.edsm-bcal-day.is-today { box-shadow: inset 0 0 0 2px #0B7CF0; }
+.edsm-bcal-day.is-selected { background: #173B67; border-color: #173B67; color: #fff; }
+
+.edsm-legend { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-inline-end: 3px; }
+.edsm-legend.is-selected { background: #173B67; }
+.edsm-legend.is-busy { background: #D2E4FB; border: 1px solid #B9D4F6; }
+.edsm-legend.is-free { background: #DCF5E4; border: 1px solid #9DDDB4; }
+.edsm-legend.is-booked { background: #E9ECF0; border: 1px solid #CDD3DA; }
+
+/* time slots */
+.edsm-slot-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 640px) { .edsm-slot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.edsm-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: 52px;
+    border-radius: 9px;
+    border: 1px solid;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.edsm-slot small { font-size: 11.5px; font-weight: 700; }
+.edsm-slot.is-free { background: #DCF5E4; border-color: #9DDDB4; color: #14532D; }
+.edsm-slot.is-free:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(20, 83, 45, 0.12); }
+.edsm-slot.is-booked { background: #E9ECF0; border-color: #CDD3DA; color: #6B7280; cursor: not-allowed; }
+.edsm-slot.is-past { background: #F5F6F8; border-color: #E5E7EB; color: #B0B7C3; cursor: not-allowed; }
+.edsm-slot.is-selected { background: #173B67; border-color: #173B67; color: #fff; }
+.edsm-slot-loading { grid-column: 1 / -1; text-align: center; color: #64748B; padding: 18px 0; font-size: 14px; }
+
+/* ---------- follow-ups page (design/متابعة.jpg) ---------- */
+/* يعيد استخدام تخطيط صفحة الحجز؛ على الجوال: النموذج ثم التقويم ثم متابعات اليوم ثم التصفية */
+.edsm-booking-grid .bk-filters { order: 5; }
+
+/* بحث المريض مع زر البحث الداكن */
+.edsm-search-navy .fa-search.absolute { display: none; }
+.edsm-search-navy input.edsm-field { padding-left: 84px; }
+.edsm-search-navy .left-3 { left: 54px; }
+.edsm-search-go {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 44px;
+    border: 0;
+    border-radius: 9px 0 0 9px;
+    background: #173B67;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.edsm-search-go:hover { background: #0F2A4C; }
+
+.edsm-fu-editing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    margin-bottom: 14px;
+    border-radius: 9px;
+    background: #FFF7E6;
+    border: 1px solid #F6D58E;
+    color: #7A4B00;
+    font-size: 13.5px;
+}
+.edsm-fu-editing[hidden] { display: none; }
+.edsm-fu-editing button { margin-inline-start: auto; width: 26px; height: 26px; border-radius: 7px; color: #7A4B00; }
+.edsm-fu-editing button:hover { background: #FDEBC4; }
+
+.edsm-quick-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: #64748B; }
+.edsm-quick-dates button {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #C8DBF4;
+    background: #F2F7FD;
+    color: #173B67;
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+.edsm-quick-dates button:hover { border-color: #0B7CF0; color: #0B7CF0; }
+
+.edsm-btn-outline-green { background: #fff; color: #15803D; border: 1px solid #9DDDB4; }
+.edsm-btn-outline-green:hover { background: #ECFDF3; color: #15803D; }
+.edsm-btn-outline-red { background: #fff; color: #DC2626; border: 1px solid #F5B5B5; }
+.edsm-btn-outline-red:hover { background: #FEF2F2; color: #B91C1C; }
+
+/* today list */
+.edsm-fu-item { width: 100%; text-align: start; background: transparent; border: 0; cursor: pointer; border-radius: 10px; padding-inline: 6px; }
+.edsm-fu-item:hover { background: #F6F9FD; }
+.edsm-fu-item.is-editing, .edsm-table tbody tr.is-editing td { background: #FFF8E8; }
+.edsm-fu-index { min-width: 22px; text-align: center; font-weight: 800; color: #334155; }
+.edsm-fu-alert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    font-size: 13.5px;
+}
+.edsm-fu-alert:hover { background: #FEE2E2; }
+
+/* multi-select filter */
+/* يسمح لقائمة الاختيار بالظهور خارج حدود البطاقة */
+.edsm-booking-grid .bk-filters { overflow: visible; }
+.edsm-multi { position: relative; }
+.edsm-multi-toggle {
+    display: flex;
+    align-items: center;
+    height: auto;
+    min-height: 42px;
+    padding: 8px 12px 8px 34px;
+    text-align: start;
+    line-height: 1.5;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 14px;
+    background-position: left 12px center;
+}
+.edsm-multi-text.is-placeholder { color: #94A3B8; }
+.edsm-multi-panel {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 4px);
+    inset-inline: 0;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #D5DEE9;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(15, 42, 76, 0.14);
+    max-height: 320px;
+    overflow-y: auto;
+}
+.edsm-multi-panel[hidden] { display: none; }
+.edsm-multi-option { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 14px; color: #1F2937; cursor: pointer; }
+.edsm-multi-option:hover { background: #F2F7FD; }
+.edsm-multi-option input { width: 16px; height: 16px; accent-color: #173B67; }
+
+/* follow-up list */
+.edsm-fu-kind { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; font-weight: 700; color: #334155; }
+.edsm-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 62px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+.edsm-state.is-active { background: #43A95A; }
+.edsm-state.is-overdue { background: #E0474C; }
+.edsm-state.is-completed { background: #8C939D; }
+.edsm-state.is-cancelled { background: #E5E7EB; color: #6B7280; }
+.edsm-text-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #1F2937;
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.edsm-text-action i { color: #173B67; font-size: 15px; }
+.edsm-text-action:hover { background: #EEF4FB; color: #0B7CF0; }
+
+/* ---------- patient profile (design/ملف المريض.jpg) ---------- */
+.edsm-title-meta { font-weight: 500; color: #334155; }
+/* الجوال: البيانات، الإجراءات، التاريخ الطبي، السجل، القادم، المخطط */
+.edsm-profile-grid { display: flex; flex-direction: column; gap: 24px; }
+.edsm-profile-side, .edsm-profile-main, .edsm-profile-pair { display: contents; }
+@media (max-width: 1023px) {
+    .edsm-profile-grid .pf-info { order: 1; }
+    .edsm-profile-grid .pf-actions { order: 2; }
+    .edsm-profile-grid .pf-medical { order: 3; }
+    .edsm-profile-grid .pf-record { order: 4; }
+    .edsm-profile-grid .pf-next { order: 5; }
+    .edsm-profile-grid .pf-chart { order: 6; }
+}
+@media (min-width: 1024px) {
+    .edsm-profile-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+    .edsm-profile-side, .edsm-profile-main { display: flex; flex-direction: column; gap: 24px; }
+    .edsm-profile-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+}
+#record, #followups { scroll-margin-top: 84px; }
+
+/* patient card */
+.edsm-pinfo { text-align: center; }
+.edsm-pinfo-avatar { width: 96px; height: 96px; margin: 2px auto 10px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 4px #EEF5FD; }
+.edsm-pinfo-avatar svg { display: block; width: 100%; height: 100%; }
+.edsm-pinfo-name { font-size: 26px; font-weight: 800; color: #0F2A4C; line-height: 1.35; }
+.edsm-pinfo-list { display: grid; gap: 8px; margin-top: 14px; text-align: start; }
+.edsm-pinfo-list div { display: flex; gap: 8px; font-size: 15px; }
+.edsm-pinfo-list dt { font-weight: 700; color: #1F2937; min-width: 96px; }
+.edsm-pinfo-list dd { font-weight: 600; color: #1F2937; }
+.edsm-pinfo-contact { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #EEF2F7; text-align: start; }
+.edsm-pinfo-contact li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; font-weight: 600; color: #1F2937; }
+.edsm-pinfo-contact i { width: 18px; margin-top: 3px; text-align: center; color: #173B67; }
+.edsm-pinfo-contact a:hover { color: #0B7CF0; }
+.edsm-pinfo-contact li.is-alert, .edsm-pinfo-contact li.is-alert i { color: #B91C1C; }
+
+/* tabs inside a card */
+.edsm-ptabs { padding: 0; margin-bottom: 16px; }
+.edsm-ptabs a { color: #334155; }
+.edsm-tab-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    background: #E6EEF8;
+    color: #334155;
+}
+.edsm-tab-count.is-warn { background: #FEF3C7; color: #B45309; }
+.edsm-tab-count.is-due { background: #FDE2E2; color: #B91C1C; font-size: 10px; }
+.edsm-tabs a .edsm-tab-count i { color: inherit; }
+.edsm-subtitle { font-size: 15px; font-weight: 800; color: #1F2937; margin: 18px 0 10px; }
+
+.edsm-allergy {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    font-size: 13.5px;
+    font-weight: 700;
+}
+.edsm-allergy i { margin-top: 3px; }
+
+.edsm-state.is-treated { background: #43A95A; }
+.edsm-state.is-progress { background: #8C939D; }
+.edsm-table tbody tr.is-flash td { background: #FFF8E8; }
+.edsm-avatar-soft.is-red { background: #FDE2E4; color: #E0404C; }
+a.edsm-upcoming { border-radius: 10px; }
+a.edsm-upcoming:hover { background: #F6F9FD; }
+
+/* notes */
+.edsm-note-form { margin-bottom: 14px; padding: 14px; border-radius: 10px; background: #F6F9FD; border: 1px solid #DCE7F4; }
+.edsm-note { padding: 10px 12px; border-radius: 10px; border: 1px solid #E6EDF5; }
+.edsm-note p { font-size: 14px; color: #1F2937; line-height: 1.7; }
+.edsm-note-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; font-size: 12.5px; color: #64748B; }
+.edsm-note-type { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #EEF2F7; color: #475569; }
+.edsm-note-type.is-medical { background: #FDE2E4; color: #B91C1C; }
+.edsm-note-type.is-financial { background: #DCFCE7; color: #15803D; }
+.edsm-note-type.is-reminder { background: #FEF3C7; color: #B45309; }
+.edsm-note-type.is-behavioral { background: #EDE9FE; color: #6D28D9; }
+
+/* accounts */
+.edsm-money-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.edsm-money { padding: 12px 14px; border-radius: 10px; background: #F3F6FA; border: 1px solid #E6EDF5; }
+.edsm-money span { font-size: 12.5px; font-weight: 700; color: #64748B; }
+.edsm-money strong { display: block; margin-top: 2px; font-size: 18px; font-weight: 800; color: #0F2A4C; }
+.edsm-money.is-paid strong { color: #15803D; }
+.edsm-money.is-due { background: #FEF2F2; border-color: #FECACA; }
+.edsm-money.is-due strong { color: #DC2626; }
+
+/* tooth chart */
+.edsm-tooth-chart { display: block; width: 100%; max-width: 230px; margin: 0 auto; }
+.edsm-tooth circle { fill: #fff; stroke: #A8B4C4; stroke-width: 1.3; transition: stroke-width 0.15s ease; }
+.edsm-tooth text { font-family: 'Montserrat', sans-serif; font-size: 8px; font-weight: 700; fill: #475569; text-anchor: middle; pointer-events: none; }
+.edsm-tooth.is-progress circle { fill: #E0474C; stroke: #C23A3F; }
+.edsm-tooth.is-treated circle { fill: #3B7BD4; stroke: #2F66B3; }
+.edsm-tooth.is-progress text, .edsm-tooth.is-treated text { fill: #fff; }
+.edsm-tooth[data-tooth] { cursor: pointer; outline: none; }
+.edsm-tooth[data-tooth]:hover circle, .edsm-tooth[data-tooth]:focus circle { stroke: #0F2A4C; stroke-width: 2.4; }
+.edsm-tooth-side, .edsm-tooth-jaw { font-size: 9px; font-weight: 700; fill: #94A3B8; text-anchor: middle; }
+.edsm-tooth-jaw { font-size: 10px; fill: #64748B; }
+.edsm-legend-tooth { border-radius: 50%; background: #fff; border: 1px solid #A8B4C4; }
+.edsm-legend-tooth.is-progress { background: #E0474C; border-color: #C23A3F; }
+.edsm-legend-tooth.is-treated { background: #3B7BD4; border-color: #2F66B3; }
+.edsm-tooth-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-inline-end: 6px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+}
+.edsm-tooth-num.is-progress { background: #E0474C; }
+.edsm-tooth-num.is-treated { background: #3B7BD4; }
+
+/* medical history */
+.edsm-med-list { display: grid; gap: 12px; }
+.edsm-med-list dt { font-size: 15px; font-weight: 800; color: #1F2937; }
+.edsm-med-list dd { margin-top: 2px; font-size: 14.5px; line-height: 1.7; color: #334155; }
+.edsm-med-list .is-alert dd { color: #B91C1C; font-weight: 700; }
+.edsm-med-note { padding: 6px 10px; border-radius: 8px; background: #F6F9FD; }
+
 /* ---- generated: Tailwind blue -> EDSM blue, + teal scale (missing from Tailwind 2) ---- */
 .bg-blue-50{background-color:#EEF5FF}.text-blue-50{color:#EEF5FF}.border-blue-50{border-color:#EEF5FF}.hover\:bg-blue-50:hover{background-color:#EEF5FF}.hover\:text-blue-50:hover{color:#EEF5FF}.hover\:border-blue-50:hover{border-color:#EEF5FF}.focus\:border-blue-50:focus{border-color:#EEF5FF}.focus\:ring-blue-50:focus{--tw-ring-color:rgba(238, 245, 255, 0.5)}.ring-blue-50{--tw-ring-color:rgba(238, 245, 255, 0.5)}.from-blue-50{--tw-gradient-from:#EEF5FF;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(238, 245, 255, 0))}.via-blue-50{--tw-gradient-stops:var(--tw-gradient-from),#EEF5FF,var(--tw-gradient-to,rgba(238, 245, 255, 0))}.to-blue-50{--tw-gradient-to:#EEF5FF}.hover\:from-blue-50:hover{--tw-gradient-from:#EEF5FF;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(238, 245, 255, 0))}.hover\:to-blue-50:hover{--tw-gradient-to:#EEF5FF}
 .bg-blue-100{background-color:#DCEBFF}.text-blue-100{color:#DCEBFF}.border-blue-100{border-color:#DCEBFF}.hover\:bg-blue-100:hover{background-color:#DCEBFF}.hover\:text-blue-100:hover{color:#DCEBFF}.hover\:border-blue-100:hover{border-color:#DCEBFF}.focus\:border-blue-100:focus{border-color:#DCEBFF}.focus\:ring-blue-100:focus{--tw-ring-color:rgba(220, 235, 255, 0.5)}.ring-blue-100{--tw-ring-color:rgba(220, 235, 255, 0.5)}.from-blue-100{--tw-gradient-from:#DCEBFF;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(220, 235, 255, 0))}.via-blue-100{--tw-gradient-stops:var(--tw-gradient-from),#DCEBFF,var(--tw-gradient-to,rgba(220, 235, 255, 0))}.to-blue-100{--tw-gradient-to:#DCEBFF}.hover\:from-blue-100:hover{--tw-gradient-from:#DCEBFF;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(220, 235, 255, 0))}.hover\:to-blue-100:hover{--tw-gradient-to:#DCEBFF}

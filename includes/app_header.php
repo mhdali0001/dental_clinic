@@ -27,7 +27,7 @@ $appMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
-<link href="<?= $appAssetBase ?>css/edsm.css" rel="stylesheet">
+<link href="<?= $appAssetBase ?>css/edsm.css?v=<?= filemtime(__DIR__ . '/../assets/css/edsm.css') ?>" rel="stylesheet">
 <script>
     // الأيقونة في تبويب المتصفح (الصفحات لا تضعها في <head>)
     (function () {
@@ -174,7 +174,7 @@ $appMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 <div class="edsm-page-head">
     <div class="edsm-page-icon"><i class="<?= $pageIcon ?? 'fas fa-tooth' ?>"></i></div>
     <div>
-        <h1><?= htmlspecialchars($pageTitle ?? '') ?></h1>
+        <h1><?= $pageTitleHtml ?? htmlspecialchars($pageTitle ?? '') /* $pageTitleHtml: عنوان منسّق جاهز (مُهرَّب مسبقاً) */ ?></h1>
         <?php if (!empty($breadcrumbs)): ?>
             <div class="edsm-crumbs">
                 <a href="<?= htmlspecialchars($appHomeUrl ?? '#') ?>">الرئيسية</a>
@@ -191,6 +191,9 @@ $appMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'ما
             <p><?= htmlspecialchars($pageSubtitle) ?></p>
         <?php endif; ?>
     </div>
+    <?php if (!empty($pageHeadActions)): /* HTML جاهز من الصفحة (مثل مربع البحث) */ ?>
+        <div class="edsm-page-head-actions"><?= $pageHeadActions ?></div>
+    <?php endif; ?>
 </div>
 
 <script>

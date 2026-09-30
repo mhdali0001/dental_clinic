@@ -10,149 +10,197 @@ checkLogin('doctor');
 $db = getDB();
 $pdo = $db->getConnection();
 
-// معالجة الإجراءات
-$action = $_GET['action'] ?? '';
-// رسالة نجاح قادمة من صفحة حجز الموعد (صفحة السكرتاريا المشتركة)
+// رسائل قادمة من صفحة الحجز (صفحة السكرتاريا المشتركة) أو من إجراءات هذه الصفحة
 $success_message = $_SESSION['appointments_success'] ?? '';
-unset($_SESSION['appointments_success']);
-$error_message = '';
-$doctor_id = $_SESSION['user_id'];
+$error_message = $_SESSION['appointments_error'] ?? '';
+unset($_SESSION['appointments_success'], $_SESSION['appointments_error']);
 
-// تحديد التاريخ المحدد
-$selected_date = $_GET['date'] ?? date('Y-m-d');
 $today = date('Y-m-d');
 
-// جلب المواعيد - استعلام مبسط ومحسن
-try {
-    // أولاً: جلب جميع المواعيد للتاريخ المحدد
-    $stmt = $pdo->prepare("
-        SELECT a.*, p.name as patient_name, p.phone, p.age, p.gender,
-               p.medical_history, p.allergies, p.blood_type
-        FROM appointments a 
-        JOIN patients p ON a.patient_id = p.id 
-        WHERE DATE(a.appointment_date) = ? 
-        ORDER BY a.appointment_time
-    ");
-    $stmt->execute([$selected_date]);
-    $appointments_basic = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // ثانياً: لكل موعد، جلب معلومات العلاج المرتبط (إن وجد)
-    $appointments = [];
-    foreach ($appointments_basic as $appointment) {
-        // البحث عن علاج مرتبط بهذا الموعد
-        $treatment_stmt = $pdo->prepare("
-            SELECT id as treatment_id, diagnosis, treatment_details, cost,
-                   payment_status, next_appointment_date
-            FROM treatments 
-            WHERE appointment_id = ?
-            LIMIT 1
-        ");
-        $treatment_stmt->execute([$appointment['id']]);
-        $treatment = $treatment_stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // دمج معلومات العلاج مع معلومات الموعد
-        if ($treatment) {
-            $appointment = array_merge($appointment, $treatment);
-        } else {
-            // إذا لم يوجد علاج، تعيين قيم فارغة
-            $appointment['treatment_id'] = null;
-            $appointment['diagnosis'] = null;
-            $appointment['treatment_details'] = null;
-            $appointment['cost'] = null;
-            $appointment['payment_status'] = null;
-            $appointment['next_appointment_date'] = null;
-        }
-        
-        $appointments[] = $appointment;
-    }
-    
-    // تجميع المواعيد حسب الوقت
-    $time_slots = [];
-    foreach ($appointments as $appointment) {
-        $time_slot = substr($appointment['appointment_time'], 0, 5); // HH:MM
-        if (!isset($time_slots[$time_slot])) {
-            $time_slots[$time_slot] = [];
-        }
-        $time_slots[$time_slot][] = $appointment;
-    }
-    ksort($time_slots);
-    
-} catch (PDOException $e) {
-    $error_message = "خطأ في قاعدة البيانات: " . $e->getMessage();
-    $appointments = [];
-    $time_slots = [];
-    
-    // إضافة تسجيل مفصل للخطأ لأغراض التشخيص
-    error_log("خطأ في جلب المواعيد: " . $e->getMessage());
-    error_log("التاريخ المحدد: " . $selected_date);
-    error_log("معرف الطبيب: " . $doctor_id);
-}
-
-// إحصائيات المواعيد - استعلام مبسط
-try {
-    // مواعيد اليوم
-    $stmt = $pdo->prepare("
-        SELECT status, COUNT(*) as count 
-        FROM appointments 
-        WHERE DATE(appointment_date) = ?
-        GROUP BY status
-    ");
-    $stmt->execute([$selected_date]);
-    $status_counts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    
-    $scheduled_count = $status_counts['scheduled'] ?? 0;
-    $confirmed_count = $status_counts['confirmed'] ?? 0;
-    $completed_count = $status_counts['completed'] ?? 0;
-    $cancelled_count = $status_counts['cancelled'] ?? 0;
-    
-    // إحصائيات الأسبوع
-    $weekStart = date('Y-m-d', strtotime('monday this week'));
-    $weekEnd = date('Y-m-d', strtotime('sunday this week'));
-    
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM appointments 
-        WHERE appointment_date BETWEEN ? AND ?
-    ");
-    $stmt->execute([$weekStart, $weekEnd]);
-    $week_appointments = $stmt->fetchColumn();
-    
-} catch (PDOException $e) {
-    $scheduled_count = $confirmed_count = $completed_count = $cancelled_count = $week_appointments = 0;
-}
-
-// جلب الأيام القادمة مع عدد المواعيد
-try {
-    $stmt = $pdo->prepare("
-        SELECT DATE(appointment_date) as date, COUNT(*) as count
-        FROM appointments 
-        WHERE appointment_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-        GROUP BY DATE(appointment_date)
-        ORDER BY appointment_date
-    ");
-    $stmt->execute();
-    $upcoming_days = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-    
-} catch (PDOException $e) {
-    $upcoming_days = [];
-}
-
-// إضافة تشخيص إضافي
-if (empty($appointments)) {
-    // فحص وجود مواعيد في قاعدة البيانات للتاريخ المحدد
+// ---------- تأكيد / إلغاء موعد ----------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['confirm', 'cancel'], true)) {
+    $newStatus = $_POST['action'] === 'confirm' ? 'confirmed' : 'cancelled';
     try {
-        $debug_stmt = $pdo->prepare("SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = ?");
-        $debug_stmt->execute([$selected_date]);
-        $debug_count = $debug_stmt->fetchColumn();
-        
-        if ($debug_count == 0) {
-            $error_message = "لا توجد مواعيد محجوزة في هذا التاريخ.";
+        $stmt = $pdo->prepare("UPDATE appointments SET status = ? WHERE id = ? AND status NOT IN ('completed', 'cancelled')");
+        $stmt->execute([$newStatus, (int)($_POST['appointment_id'] ?? 0)]);
+        if ($stmt->rowCount() > 0) {
+            $_SESSION['appointments_success'] = $newStatus === 'confirmed' ? 'تم تأكيد الموعد' : 'تم إلغاء الموعد';
         } else {
-            $error_message = "توجد $debug_count موعد/مواعيد في قاعدة البيانات لكن حدث خطأ في جلبها.";
+            $_SESSION['appointments_error'] = 'لا يمكن تعديل حالة هذا الموعد';
         }
     } catch (PDOException $e) {
-        $error_message = "خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage();
+        $_SESSION['appointments_error'] = 'خطأ في تحديث الموعد: ' . $e->getMessage();
     }
+    header('Location: ' . $_SERVER['REQUEST_URI']);
+    exit;
 }
+
+// ---------- المعاملات ----------
+$selected_date = $_GET['date'] ?? $today;
+if (($_GET['filter'] ?? '') === 'today') {
+    $selected_date = $today;
+}
+$dt = DateTime::createFromFormat('!Y-m-d', $selected_date);
+if (!$dt || $dt->format('Y-m-d') !== $selected_date) {
+    $selected_date = $today;
+    $dt = new DateTime($today);
+}
+
+$view = ($_GET['view'] ?? 'list') === 'calendar' ? 'calendar' : 'list';
+$range = in_array($_GET['range'] ?? 'day', ['day', 'week', 'month', 'upcoming', 'all'], true) ? ($_GET['range'] ?? 'day') : 'day';
+$search = trim($_GET['q'] ?? '');
+$type_filter = trim($_GET['type'] ?? '');
+$status_filter = $_GET['status'] ?? '';
+
+$arabicMonths = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+$statusMeta = [
+    'scheduled' => ['مجدول', 'scheduled', 'far fa-clock'],
+    'confirmed' => ['مؤكد', 'confirmed', 'fas fa-check-circle'],
+    'completed' => ['مكتمل', 'completed', 'fas fa-check-double'],
+    'cancelled' => ['ملغي', 'cancelled', 'fas fa-times-circle'],
+    'no_show'   => ['لم يحضر', 'noshow', 'fas fa-user-slash'],
+];
+$rangeLabels = ['day' => 'اليوم المحدد', 'week' => 'أسبوع التاريخ المحدد', 'month' => 'شهر التاريخ المحدد', 'upcoming' => 'المواعيد القادمة', 'all' => 'كل المواعيد'];
+
+// رابط يحافظ على المعاملات الحالية مع تغيير بعضها
+function appointmentsUrl(array $changes = []) {
+    $params = array_merge($_GET, $changes);
+    unset($params['filter']);
+    $params = array_filter($params, fn($v) => $v !== '' && $v !== null);
+    return 'appointments.php' . ($params ? '?' . http_build_query($params) : '');
+}
+
+// الشهر المعروض في التقويم = شهر التاريخ المحدد
+$monthStart = (clone $dt)->modify('first day of this month');
+$monthEnd = (clone $dt)->modify('last day of this month');
+
+try {
+    // ---------- قائمة المواعيد حسب الفلاتر ----------
+    $where = [];
+    $params = [];
+    switch ($range) {
+        case 'day':
+            $where[] = 'a.appointment_date = ?';
+            $params[] = $selected_date;
+            break;
+        case 'week':
+            $weekStart = (clone $dt)->modify('saturday this week');
+            if ($weekStart > $dt) { $weekStart->modify('-7 days'); }
+            $where[] = 'a.appointment_date BETWEEN ? AND ?';
+            $params[] = $weekStart->format('Y-m-d');
+            $params[] = (clone $weekStart)->modify('+6 days')->format('Y-m-d');
+            break;
+        case 'month':
+            $where[] = 'a.appointment_date BETWEEN ? AND ?';
+            $params[] = $monthStart->format('Y-m-d');
+            $params[] = $monthEnd->format('Y-m-d');
+            break;
+        case 'upcoming':
+            $where[] = 'a.appointment_date >= ?';
+            $params[] = $today;
+            break;
+    }
+    if ($search !== '') {
+        $where[] = '(p.name LIKE ? OR p.phone LIKE ?)';
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
+    if ($type_filter !== '') {
+        $where[] = 'a.treatment_type = ?';
+        $params[] = $type_filter;
+    }
+    if (isset($statusMeta[$status_filter])) {
+        $where[] = 'a.status = ?';
+        $params[] = $status_filter;
+    }
+    $order = $range === 'all' ? 'a.appointment_date DESC, a.appointment_time DESC' : 'a.appointment_date, a.appointment_time';
+
+    $stmt = $pdo->prepare("
+        SELECT a.*, p.name AS patient_name, p.phone, p.medical_history, p.allergies,
+               (SELECT t.id FROM treatments t WHERE t.appointment_id = a.id ORDER BY t.id LIMIT 1) AS treatment_id
+        FROM appointments a
+        JOIN patients p ON a.patient_id = p.id
+        " . ($where ? 'WHERE ' . implode(' AND ', $where) : '') . "
+        ORDER BY $order
+        LIMIT 300
+    ");
+    $stmt->execute($params);
+    $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $status_counts = array_count_values(array_column($appointments, 'status'));
+
+    // ---------- أيام الشهر التي فيها مواعيد (للتقويم الصغير) ----------
+    $stmt = $pdo->prepare("
+        SELECT appointment_date, COUNT(*) FROM appointments
+        WHERE appointment_date BETWEEN ? AND ? AND status != 'cancelled'
+        GROUP BY appointment_date
+    ");
+    $stmt->execute([$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')]);
+    $days_with_appointments = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // ---------- مواعيد الشهر (عرض التقويم) ----------
+    $month_appointments = [];
+    if ($view === 'calendar') {
+        $stmt = $pdo->prepare("
+            SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.treatment_type, p.name AS patient_name
+            FROM appointments a JOIN patients p ON a.patient_id = p.id
+            WHERE a.appointment_date BETWEEN ? AND ?
+            ORDER BY a.appointment_date, a.appointment_time
+        ");
+        $stmt->execute([$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $month_appointments[$row['appointment_date']][] = $row;
+        }
+    }
+
+    // ---------- مواعيد اليوم القادمة (الشريط الجانبي) ----------
+    $stmt = $pdo->prepare("
+        SELECT a.id, a.patient_id, a.appointment_date, a.appointment_time, a.treatment_type, a.status, p.name AS patient_name,
+               (SELECT t.id FROM treatments t WHERE t.appointment_id = a.id ORDER BY t.id LIMIT 1) AS treatment_id
+        FROM appointments a JOIN patients p ON a.patient_id = p.id
+        WHERE a.appointment_date = ? AND a.status IN ('scheduled', 'confirmed')
+        ORDER BY a.appointment_time
+        LIMIT 6
+    ");
+    $stmt->execute([$today]);
+    $today_upcoming = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ---------- قوائم النماذج ----------
+    $treatment_types = $pdo->query("SELECT DISTINCT treatment_type FROM appointments WHERE treatment_type <> '' ORDER BY treatment_type")->fetchAll(PDO::FETCH_COLUMN);
+    $patients_list = $pdo->query("SELECT id, name, phone, age FROM patients WHERE status = 'active' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error_message = 'خطأ في قاعدة البيانات: ' . $e->getMessage();
+    $appointments = $month_appointments = $today_upcoming = $patients_list = $treatment_types = [];
+    $days_with_appointments = $status_counts = [];
+}
+
+// أنواع الإجراءات في نموذج الحجز (نفس قائمة صفحة الحجز) + أي نوع مستخدم سابقاً
+$booking_types = array_values(array_unique(array_merge(
+    ['فحص عام', 'تنظيف أسنان', 'حشو أسنان', 'علاج جذور', 'خلع أسنان', 'زراعة أسنان', 'تقويم أسنان', 'تبييض أسنان'],
+    $treatment_types,
+    ['أخرى']
+)));
+
+// شبكة التقويم (الأسبوع يبدأ السبت)
+function monthGrid(DateTime $monthStart) {
+    $first = clone $monthStart;
+    $offset = ((int)$first->format('w') + 1) % 7; // السبت = 0
+    $first->modify("-$offset days");
+    $cells = [];
+    for ($i = 0; $i < 42; $i++) {
+        $cells[] = (clone $first)->modify("+$i days");
+    }
+    // حذف الأسبوع الأخير إن كان كله من الشهر التالي
+    if ($cells[35]->format('m') !== $monthStart->format('m')) {
+        $cells = array_slice($cells, 0, 35);
+    }
+    return $cells;
+}
+$gridCells = monthGrid($monthStart);
+$prevMonth = (clone $monthStart)->modify('-1 month')->format('Y-m-d');
+$nextMonth = (clone $monthStart)->modify('+1 month')->format('Y-m-d');
+$weekDaysShort = ['س', 'ح', 'ن', 'ث', 'ر', 'خ', 'ج'];
+$weekDaysLong = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
 // Header configuration
 $pageTitle = 'إدارة المواعيد';
@@ -160,7 +208,6 @@ $pageIcon = 'fas fa-calendar-check';
 $pageSubtitle = 'جدولة ومتابعة مواعيد المرضى';
 $currentPage = 'appointments';
 ?>
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -169,313 +216,357 @@ $currentPage = 'appointments';
     <title><?= $pageTitle ?> - عيادة الأسنان</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .appointment-card { transition: all 0.3s ease; border-left: 4px solid #e5e7eb; }
-        .appointment-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .patient-info-link { text-decoration: none; }
-        .patient-info-link:hover .patient-name { color: #2563eb !important; }
-        .status-scheduled { border-left-color: #f59e0b; }
-        .status-confirmed { border-left-color: #3b82f6; }
-        .status-completed { border-left-color: #10b981; }
-        .status-cancelled { border-left-color: #ef4444; }
-        .medical-alert { background: linear-gradient(45deg, #fee2e2, #fef2f2); }
-        .treatment-completed { background: linear-gradient(45deg, #d1fae5, #ecfdf5); }
-        .debug-info { background: #fef3c7; border: 1px solid #f59e0b; padding: 10px; margin: 10px 0; border-radius: 5px; }
-    </style>
 </head>
 <body class="bg-gray-50">
-
-
     <?php include 'includes/doctor_header.php'; ?>
- 
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Success/Error Messages -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <?php if ($success_message): ?>
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 fade-in">
-                <i class="fas fa-check-circle ml-1"></i>
-                <?= $success_message ?>
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-5 fade-in">
+                <i class="fas fa-check-circle ml-1"></i> <?= htmlspecialchars($success_message) ?>
             </div>
         <?php endif; ?>
-
         <?php if ($error_message): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 fade-in">
-                <i class="fas fa-exclamation-triangle ml-1"></i>
-                <?= $error_message ?>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-5 fade-in">
+                <i class="fas fa-exclamation-triangle ml-1"></i> <?= htmlspecialchars($error_message) ?>
             </div>
         <?php endif; ?>
 
-        <!-- Debug Info (يمكن إزالتها لاحقاً) -->
-        <?php if (isset($_GET['debug'])): ?>
-            <div class="debug-info">
-                <strong>معلومات التشخيص:</strong><br>
-                التاريخ المحدد: <?= $selected_date ?><br>
-                معرف الطبيب: <?= $doctor_id ?><br>
-                عدد المواعيد المجلبة: <?= count($appointments) ?><br>
-                <?php if (!empty($appointments)): ?>
-                    أول موعد: <?= print_r($appointments[0], true) ?>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
-        <!-- Date Navigation -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm font-medium text-gray-700">التاريخ:</label>
-                        <input type="date" 
-                               id="appointment_date" 
-                               value="<?= $selected_date ?>" 
-                               class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                               onchange="window.location.href = '?date=' + this.value">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <!-- ================= الشريط الجانبي ================= -->
+            <aside class="space-y-6 lg:col-span-1 order-2 lg:order-none">
+                <!-- تقويم الشهر -->
+                <div class="edsm-card edsm-mini-cal fade-in">
+                    <div class="edsm-mini-cal-head">
+                        <a href="<?= htmlspecialchars(appointmentsUrl(['date' => $prevMonth])) ?>" class="edsm-mini-cal-nav" title="الشهر السابق"><i class="fas fa-chevron-right"></i></a>
+                        <strong><?= $arabicMonths[(int)$monthStart->format('n')] . ' ' . $monthStart->format('Y') ?></strong>
+                        <a href="<?= htmlspecialchars(appointmentsUrl(['date' => $nextMonth])) ?>" class="edsm-mini-cal-nav" title="الشهر التالي"><i class="fas fa-chevron-left"></i></a>
                     </div>
-                    
-                    <div class="flex gap-2">
-                        <a href="?date=<?= $today ?>" 
-                           class="<?= $selected_date === $today ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' ?> px-4 py-2 rounded-lg text-sm transition">
-                            اليوم
-                        </a>
-                        <a href="?date=<?= date('Y-m-d', strtotime('+1 day')) ?>" 
-                           class="<?= $selected_date === date('Y-m-d', strtotime('+1 day')) ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700' ?> px-4 py-2 rounded-lg text-sm transition">
-                            غداً
-                        </a>
+                    <div class="edsm-mini-cal-grid">
+                        <?php foreach ($weekDaysShort as $i => $d): ?>
+                            <span class="edsm-mini-cal-dow" title="<?= $weekDaysLong[$i] ?>"><?= $d ?></span>
+                        <?php endforeach; ?>
+                        <?php foreach ($gridCells as $cell): ?>
+                            <?php
+                            $cellDate = $cell->format('Y-m-d');
+                            $classes = ['edsm-mini-cal-day'];
+                            if ($cell->format('m') !== $monthStart->format('m')) $classes[] = 'is-other';
+                            if ($cellDate === $today) $classes[] = 'is-today';
+                            if ($cellDate === $selected_date) $classes[] = 'is-selected';
+                            if (!empty($days_with_appointments[$cellDate])) $classes[] = 'has-appointments';
+                            ?>
+                            <a href="<?= htmlspecialchars(appointmentsUrl(['date' => $cellDate, 'range' => $view === 'list' ? 'day' : ($_GET['range'] ?? '')])) ?>"
+                               class="<?= implode(' ', $classes) ?>"
+                               title="<?= !empty($days_with_appointments[$cellDate]) ? $days_with_appointments[$cellDate] . ' موعد' : '' ?>">
+                                <span class="edsm-num"><?= (int)$cell->format('j') ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
+                        <span><span class="edsm-mini-cal-dot"></span> يوم فيه مواعيد</span>
+                        <?php if ($selected_date !== $today): ?>
+                            <a href="<?= htmlspecialchars(appointmentsUrl(['date' => $today])) ?>" class="edsm-link text-xs">اليوم</a>
+                        <?php endif; ?>
                     </div>
                 </div>
-                
-                <div class="flex gap-4">
-                    <a href="../nurse/appointments.php?action=add&date=<?= urlencode($selected_date < $today ? $today : $selected_date) ?>"
-                       class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition flex items-center">
-                        <i class="fas fa-calendar-plus ml-2"></i>
-                        حجز موعد
-                    </a>
-                    <a href="treatment_new.php"
-                       class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition flex items-center">
-                        <i class="fas fa-plus ml-2"></i>
-                        إضافة علاج
-                    </a>
-                </div>
-            </div>
-        </div>
 
-        <!-- Statistics Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 fade-in">
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-yellow-600"><?= $scheduled_count ?></div>
-                <div class="text-sm text-yellow-600">مجدول</div>
-            </div>
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-blue-600"><?= $confirmed_count ?></div>
-                <div class="text-sm text-blue-600">مؤكد</div>
-            </div>
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-green-600"><?= $completed_count ?></div>
-                <div class="text-sm text-green-600">مكتمل</div>
-            </div>
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-red-600"><?= $cancelled_count ?></div>
-                <div class="text-sm text-red-600">ملغي</div>
-            </div>
-        </div>
-
-        <!-- Appointments List -->
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden fade-in">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-xl font-bold text-gray-800">
-                    <i class="fas fa-calendar-day ml-2"></i>
-                    مواعيد <?= $selected_date === $today ? 'اليوم' : date('d/m/Y', strtotime($selected_date)) ?>
-                    <span class="text-sm text-gray-500 mr-2">(<?= count($appointments) ?> موعد)</span>
-                </h3>
-            </div>
-            
-            <div class="divide-y divide-gray-200">
-                <?php if (empty($appointments)): ?>
-                    <div class="text-center py-16">
-                        <i class="fas fa-calendar-day text-6xl text-gray-300 mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">لا توجد مواعيد</h3>
-                        <p class="text-gray-600">لا توجد مواعيد محجوزة في هذا التاريخ.</p>
-                        <a href="?debug=1" class="mt-4 inline-block text-blue-600 hover:text-blue-800">عرض معلومات التشخيص</a>
+                <!-- إضافة موعد جديد (يُحفظ عبر صفحة الحجز المشتركة ثم يعود إلى هنا) -->
+                <div class="edsm-card fade-in">
+                    <div class="edsm-card-head" style="margin-bottom: 14px;">
+                        <h3 class="edsm-card-title"><i class="fas fa-calendar-plus"></i> إضافة موعد جديد</h3>
                     </div>
-                <?php else: ?>
-                    <?php foreach ($appointments as $appointment): ?>
-                        <?php
-                        $has_treatment = !empty($appointment['treatment_id']);
-                        $card_class = $has_treatment ? 'treatment-completed' : '';
-                        ?>
-                        <div class="appointment-card p-6 hover:bg-blue-50 status-<?= $appointment['status'] ?> <?= $card_class ?> cursor-pointer transition-colors" onclick="window.location.href='patient_profile.php?id=<?= $appointment['patient_id'] ?>'">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center mb-2">
-                                        <div class="bg-blue-100 p-2 rounded-full ml-3">
-                                            <i class="fas fa-<?= $has_treatment ? 'check-circle' : 'user' ?> text-<?= $has_treatment ? 'green' : 'blue' ?>-600"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="patient-name text-lg font-semibold text-gray-900 transition-colors">
-                                                <?= htmlspecialchars($appointment['patient_name']) ?>
-                                                <?php if ($has_treatment): ?>
-                                                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mr-2">تم العلاج</span>
-                                                <?php endif; ?>
-                                            </h4>
-                                            <div class="flex items-center text-sm text-gray-600 mt-1">
-                                                <i class="fas fa-phone ml-1"></i>
-                                                <a href="tel:<?= $appointment['phone'] ?>" class="text-green-600 hover:text-green-800 ml-4" onclick="event.stopPropagation();">
-                                                    <?= $appointment['phone'] ?>
-                                                </a>
-                                                <i class="fas fa-user ml-4"></i>
-                                                <span class="ml-1"><?= $appointment['age'] ?> سنة - <?= $appointment['gender'] === 'male' ? 'ذكر' : 'أنثى' ?></span>
-                                                <i class="fas fa-clock ml-4"></i>
-                                                <span class="ml-1 font-semibold text-blue-600">
-                                                    <?= date('h:i A', strtotime($appointment['appointment_time'])) ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm">
-                                        <div class="text-gray-600">
-                                            <i class="fas fa-tooth text-blue-500 ml-1"></i>
-                                            <strong>نوع العلاج:</strong>
-                                            <?= htmlspecialchars($appointment['treatment_type']) ?>
-                                        </div>
-                                        <div class="text-gray-600">
-                                            <i class="fas fa-hourglass-half text-purple-500 ml-1"></i>
-                                            <strong>المدة المتوقعة:</strong>
-                                            <?= $appointment['estimated_duration'] ?> دقيقة
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Treatment Information -->
-                                    <?php if ($has_treatment): ?>
-                                        <div class="mt-4 p-3 bg-green-50 border-r-4 border-green-300 rounded">
-                                            <h5 class="font-semibold text-green-800 mb-2">
-                                                <i class="fas fa-check-circle ml-1"></i>
-                                                العلاج المقدم
-                                            </h5>
-                                            <p class="text-sm text-green-700">
-                                                <strong>التشخيص:</strong> <?= htmlspecialchars($appointment['diagnosis']) ?>
-                                            </p>
-                                            <?php if ($appointment['cost']): ?>
-                                                <div class="flex items-center justify-between mt-2">
-                                                    <span class="text-sm text-green-700">
-                                                        <strong>التكلفة:</strong> <?= number_format($appointment['cost'], 2) ?> ليرة سورية
-                                                    </span>
-                                                    <span class="text-xs px-2 py-1 rounded-full <?php
-                                                        echo match($appointment['payment_status']) {
-                                                            'paid' => 'bg-green-100 text-green-800',
-                                                            'partial' => 'bg-yellow-100 text-yellow-800',
-                                                            'unpaid' => 'bg-red-100 text-red-800',
-                                                            default => 'bg-gray-100 text-gray-800'
-                                                        };
-                                                    ?>">
-                                                        <?php
-                                                        echo match($appointment['payment_status']) {
-                                                            'paid' => 'مدفوع',
-                                                            'partial' => 'جزئي',
-                                                            'unpaid' => 'غير مدفوع',
-                                                            default => 'غير محدد'
-                                                        };
-                                                        ?>
-                                                    </span>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <!-- Medical Alerts -->
-                                    <?php if ($appointment['medical_history'] || $appointment['allergies']): ?>
-                                        <div class="mt-4 p-3 medical-alert border-r-4 border-red-300 rounded">
-                                            <div class="flex items-start">
-                                                <i class="fas fa-exclamation-triangle text-red-600 mt-0.5 ml-2"></i>
-                                                <div class="text-sm">
-                                                    <h5 class="font-semibold text-red-800 mb-1">تنبيه طبي مهم</h5>
-                                                    <?php if ($appointment['medical_history']): ?>
-                                                        <div class="text-red-800 mb-1">
-                                                            <strong>التاريخ المرضي:</strong>
-                                                            <?= htmlspecialchars($appointment['medical_history']) ?>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                    <?php if ($appointment['allergies']): ?>
-                                                        <div class="text-red-800">
-                                                            <strong>الحساسية:</strong>
-                                                            <?= htmlspecialchars($appointment['allergies']) ?>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($appointment['notes']): ?>
-                                        <div class="mt-4 p-3 bg-blue-50 border-r-4 border-blue-300 rounded">
-                                            <p class="text-sm text-blue-800">
-                                                <i class="fas fa-sticky-note ml-1"></i>
-                                                <strong>ملاحظات:</strong>
-                                                <?= htmlspecialchars($appointment['notes']) ?>
-                                            </p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <div class="flex flex-col space-y-2 mr-4">
-                                    <!-- حالة الموعد -->
-                                    <div class="text-center">
-                                        <?php
-                                        $statusClasses = [
-                                            'scheduled' => 'bg-yellow-100 text-yellow-800',
-                                            'confirmed' => 'bg-blue-100 text-blue-800',
-                                            'completed' => 'bg-green-100 text-green-800',
-                                            'cancelled' => 'bg-red-100 text-red-800'
-                                        ];
-                                        $statusTexts = [
-                                            'scheduled' => 'مجدول',
-                                            'confirmed' => 'مؤكد',
-                                            'completed' => 'مكتمل',
-                                            'cancelled' => 'ملغي'
-                                        ];
-                                        ?>
-                                        <span class="<?= $statusClasses[$appointment['status']] ?? 'bg-gray-100 text-gray-800' ?> px-3 py-1 rounded-full text-sm font-medium">
-                                            <?= $statusTexts[$appointment['status']] ?? $appointment['status'] ?>
+                    <form method="POST" action="../nurse/appointments.php?action=add&amp;date=<?= urlencode($selected_date) ?>" class="space-y-3" id="quickBookingForm">
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="estimated_duration" value="30">
+                        <div>
+                            <label for="quickPatientSearch" class="edsm-label">المريض</label>
+                            <select name="patient_id" id="quickPatientSelect" required class="edsm-field">
+                                <option value="">اختر المريض...</option>
+                                <?php foreach ($patients_list as $patient): ?>
+                                    <option value="<?= $patient['id'] ?>" data-name="<?= htmlspecialchars($patient['name']) ?>"
+                                            data-phone="<?= htmlspecialchars($patient['phone'] ?? '') ?>" data-age="<?= htmlspecialchars($patient['age'] ?? '') ?>">
+                                        <?= htmlspecialchars($patient['name']) ?> - <?= htmlspecialchars($patient['phone'] ?? '') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="quickType" class="edsm-label">الإجراء</label>
+                            <select name="treatment_type" id="quickType" required class="edsm-field">
+                                <option value="">اختر الإجراء</option>
+                                <?php foreach ($booking_types as $type): ?>
+                                    <option value="<?= htmlspecialchars($type) ?>"><?= htmlspecialchars($type) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="quickDate" class="edsm-label">التاريخ</label>
+                                <input type="date" name="appointment_date" id="quickDate" required class="edsm-field"
+                                       value="<?= $selected_date >= $today ? $selected_date : $today ?>" min="<?= $today ?>">
+                            </div>
+                            <div>
+                                <label for="quickTime" class="edsm-label">الوقت</label>
+                                <input type="time" name="appointment_time" id="quickTime" required class="edsm-field" value="09:00">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 pt-1">
+                            <button type="submit" class="edsm-btn edsm-btn-lg"><i class="fas fa-check"></i> حجز الموعد</button>
+                            <button type="reset" class="edsm-btn edsm-btn-ghost edsm-btn-lg">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- مواعيد اليوم القادمة -->
+                <div class="edsm-card fade-in">
+                    <div class="edsm-card-head" style="margin-bottom: 10px;">
+                        <h3 class="edsm-card-title"><i class="far fa-calendar-alt"></i> المواعيد القادمة اليوم</h3>
+                    </div>
+                    <?php if (empty($today_upcoming)): ?>
+                        <div class="edsm-empty" style="padding: 16px 6px;">
+                            <div class="edsm-empty-icon"><i class="far fa-calendar-check"></i></div>
+                            <p style="margin-bottom: 0;">لا توجد مواعيد متبقية اليوم</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="divide-y divide-gray-100">
+                            <?php foreach ($today_upcoming as $i => $up): ?>
+                                <?php
+                                $upUrl = $up['treatment_id'] ? 'treatment_details.php?id=' . $up['treatment_id']
+                                       : 'treatment_new.php?appointment_id=' . $up['id'] . '&patient_id=' . $up['patient_id'];
+                                $upIcons = ['fas fa-tooth', 'far fa-user', 'far fa-calendar-alt'];
+                                ?>
+                                <a href="<?= htmlspecialchars($upUrl) ?>" class="edsm-upcoming">
+                                    <span class="edsm-avatar-soft <?= $i % 3 === 1 ? 'is-teal' : '' ?>"><i class="<?= $upIcons[$i % 3] ?>"></i></span>
+                                    <span class="flex-1 min-w-0">
+                                        <span class="edsm-row-title block"><?= htmlspecialchars($up['patient_name']) ?></span>
+                                        <span class="edsm-row-meta block">
+                                            <span class="edsm-num"><?= date('d/m/Y', strtotime($up['appointment_date'])) ?> · <?= date('H:i', strtotime($up['appointment_time'])) ?></span>
+                                            · <?= htmlspecialchars($up['treatment_type']) ?>
                                         </span>
-                                    </div>
-                                    
-                                    <!-- زر إضافة علاج جديد -->
-                                    <?php if (!$has_treatment && $appointment['status'] !== 'cancelled'): ?>
-                                        <a href="treatment_new.php?appointment_id=<?= $appointment['id'] ?>&patient_id=<?= $appointment['patient_id'] ?>" 
-                                           class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center justify-center"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-plus ml-1"></i>
-                                            إضافة علاج
-                                        </a>
+                                    </span>
+                                    <i class="fas fa-chevron-left text-gray-400 text-xs"></i>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </aside>
+
+            <!-- ================= المحتوى الرئيسي ================= -->
+            <section class="edsm-card lg:col-span-2 order-1 lg:order-none fade-in" style="padding: 0;">
+                <nav class="edsm-tabs">
+                    <a href="<?= htmlspecialchars(appointmentsUrl(['view' => 'list'])) ?>" class="<?= $view === 'list' ? 'active' : '' ?>">
+                        <i class="fas fa-list-ul"></i> قائمة المواعيد
+                    </a>
+                    <a href="<?= htmlspecialchars(appointmentsUrl(['view' => 'calendar'])) ?>" class="<?= $view === 'calendar' ? 'active' : '' ?>">
+                        <i class="far fa-calendar-alt"></i> تقويم المواعيد
+                    </a>
+                    <a href="../nurse/appointments.php?action=add&amp;date=<?= urlencode($selected_date >= $today ? $selected_date : $today) ?>" class="edsm-tabs-action" title="حجز موعد">
+                        <i class="fas fa-plus"></i> <span class="edsm-tabs-action-text">حجز موعد</span>
+                    </a>
+                </nav>
+
+                <div style="padding: 20px 22px 22px;">
+                <?php if ($view === 'list'): ?>
+                    <form method="GET" class="space-y-4" id="appointmentsFilter">
+                        <input type="hidden" name="view" value="list">
+                        <input type="hidden" name="date" value="<?= htmlspecialchars($selected_date) ?>">
+                        <div class="relative">
+                            <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="البحث عن مريض بالاسم أو رقم الهاتف"
+                                   class="edsm-field" style="padding-right: 42px; height: 48px;">
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-gray-700 mb-2">تصفية النتائج</div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                                <div>
+                                    <label class="edsm-label" for="fRange">الفترة</label>
+                                    <select name="range" id="fRange" class="edsm-field">
+                                        <?php foreach ($rangeLabels as $key => $label): ?>
+                                            <option value="<?= $key ?>" <?= $range === $key ? 'selected' : '' ?>><?= $label ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="edsm-label" for="fType">الإجراء</label>
+                                    <select name="type" id="fType" class="edsm-field">
+                                        <option value="">كل الإجراءات</option>
+                                        <?php foreach ($treatment_types as $type): ?>
+                                            <option value="<?= htmlspecialchars($type) ?>" <?= $type_filter === $type ? 'selected' : '' ?>><?= htmlspecialchars($type) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="edsm-label" for="fStatus">الحالة</label>
+                                    <select name="status" id="fStatus" class="edsm-field">
+                                        <option value="">كل الحالات</option>
+                                        <?php foreach ($statusMeta as $key => [$label]): ?>
+                                            <option value="<?= $key ?>" <?= $status_filter === $key ? 'selected' : '' ?>><?= $label ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="edsm-btn edsm-btn-lg flex-1"><i class="fas fa-filter"></i> تصفية</button>
+                                    <?php if ($search !== '' || $type_filter !== '' || $status_filter !== '' || $range !== 'day'): ?>
+                                        <a href="<?= htmlspecialchars(appointmentsUrl(['q' => null, 'type' => null, 'status' => null, 'range' => null])) ?>" class="edsm-btn edsm-btn-ghost edsm-btn-lg" title="مسح الفلاتر"><i class="fas fa-times"></i></a>
                                     <?php endif; ?>
-                                    
-                                    <!-- زر عرض العلاج -->
-                                    <?php if ($has_treatment): ?>
-                                        <a href="treatment_details.php?id=<?= $appointment['treatment_id'] ?>" 
-                                           class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center justify-center"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-eye ml-1"></i>
-                                            عرض العلاج
-                                        </a>
-                                    <?php endif; ?>
-                                    
-                                    <!-- زر الملف الشخصي -->
-                                    <a href="patient_profile.php?id=<?= $appointment['patient_id'] ?>" 
-                                       class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center justify-center"
-                                       onclick="event.stopPropagation();">
-                                        <i class="fas fa-user-circle ml-1"></i>
-                                        الملف الشخصي
-                                    </a>
                                 </div>
                             </div>
                         </div>
-                    <?php endforeach; ?>
+                    </form>
+
+                    <!-- ملخص النتائج -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 mt-5 mb-3">
+                        <div class="font-bold text-gray-800">
+                            <?php if ($range === 'day'): ?>
+                                مواعيد <?= $selected_date === $today ? 'اليوم' : '<span class="edsm-num">' . date('d/m/Y', strtotime($selected_date)) . '</span>' ?>
+                            <?php else: ?>
+                                <?= $rangeLabels[$range] ?>
+                            <?php endif; ?>
+                            <span class="text-sm text-gray-500 font-normal">(<span class="edsm-num"><?= count($appointments) ?></span> موعد)</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <?php foreach ($statusMeta as $key => [$label, $cls]): ?>
+                                <?php if (!empty($status_counts[$key])): ?>
+                                    <span class="edsm-status edsm-status-<?= $cls ?>"><?= $label ?> <span class="edsm-num"><?= $status_counts[$key] ?></span></span>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <?php if (empty($appointments)): ?>
+                        <div class="edsm-empty">
+                            <div class="edsm-empty-icon"><i class="far fa-calendar-alt"></i></div>
+                            <p>لا توجد مواعيد مطابقة</p>
+                            <a href="../nurse/appointments.php?action=add&amp;date=<?= urlencode($selected_date >= $today ? $selected_date : $today) ?>" class="edsm-btn edsm-btn-lg"><i class="fas fa-plus"></i> حجز موعد جديد</a>
+                        </div>
+                    <?php else: ?>
+                        <div class="edsm-table-wrap">
+                            <table class="edsm-table">
+                                <thead>
+                                    <tr>
+                                        <th>تاريخ الموعد</th>
+                                        <th>الوقت</th>
+                                        <th>المريض</th>
+                                        <th>الإجراء</th>
+                                        <th>الحالة</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($appointments as $appointment): ?>
+                                        <?php
+                                        [$sLabel, $sCls, $sIcon] = $statusMeta[$appointment['status']] ?? [$appointment['status'], 'noshow', 'far fa-circle'];
+                                        $isOpen = in_array($appointment['status'], ['scheduled', 'confirmed'], true);
+                                        $hasAlert = !empty($appointment['medical_history']) || !empty($appointment['allergies']);
+                                        ?>
+                                        <tr>
+                                            <td class="edsm-num font-bold"><?= date('d/m/Y', strtotime($appointment['appointment_date'])) ?></td>
+                                            <td class="edsm-num"><?= date('H:i', strtotime($appointment['appointment_time'])) ?></td>
+                                            <td>
+                                                <a href="patient_profile.php?id=<?= $appointment['patient_id'] ?>" class="font-bold text-gray-800 hover:text-blue-600">
+                                                    <?= htmlspecialchars($appointment['patient_name']) ?>
+                                                </a>
+                                                <?php if ($hasAlert): ?>
+                                                    <i class="fas fa-exclamation-triangle text-red-500 text-xs mr-1"
+                                                       title="<?= htmlspecialchars(trim(($appointment['medical_history'] ? 'التاريخ المرضي: ' . $appointment['medical_history'] . "\n" : '') . ($appointment['allergies'] ? 'الحساسية: ' . $appointment['allergies'] : ''))) ?>"></i>
+                                                <?php endif; ?>
+                                                <?php if (!empty($appointment['notes'])): ?>
+                                                    <i class="far fa-sticky-note text-gray-400 text-xs mr-1" title="<?= htmlspecialchars($appointment['notes']) ?>"></i>
+                                                <?php endif; ?>
+                                                <div class="text-xs text-gray-500 edsm-num" dir="ltr" style="text-align: right;"><?= htmlspecialchars($appointment['phone'] ?? '') ?></div>
+                                            </td>
+                                            <td class="font-bold text-gray-700"><?= htmlspecialchars($appointment['treatment_type']) ?></td>
+                                            <td>
+                                                <span class="edsm-status edsm-status-<?= $sCls ?>"><i class="<?= $sIcon ?>"></i> <?= $sLabel ?></span>
+                                                <?php if ($appointment['treatment_id']): ?>
+                                                    <div class="text-xs text-green-600 mt-1"><i class="fas fa-tooth"></i> تم العلاج</div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <div class="edsm-actions-cell">
+                                                    <?php if ($appointment['treatment_id']): ?>
+                                                        <a href="treatment_details.php?id=<?= $appointment['treatment_id'] ?>" class="edsm-icon-action is-blue" title="عرض العلاج"><i class="fas fa-eye"></i></a>
+                                                    <?php elseif ($appointment['status'] !== 'cancelled'): ?>
+                                                        <a href="treatment_new.php?appointment_id=<?= $appointment['id'] ?>&amp;patient_id=<?= $appointment['patient_id'] ?>" class="edsm-icon-action is-blue" title="بدء العلاج"><i class="fas fa-tooth"></i></a>
+                                                    <?php endif; ?>
+                                                    <?php if ($appointment['status'] === 'scheduled'): ?>
+                                                        <form method="POST" class="inline">
+                                                            <input type="hidden" name="action" value="confirm">
+                                                            <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
+                                                            <button type="submit" class="edsm-icon-action is-green" title="تأكيد الموعد"><i class="fas fa-check"></i></button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                    <?php if ($isOpen && !$appointment['treatment_id']): ?>
+                                                        <form method="POST" class="inline" onsubmit="return confirm('هل تريد إلغاء هذا الموعد؟');">
+                                                            <input type="hidden" name="action" value="cancel">
+                                                            <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
+                                                            <button type="submit" class="edsm-icon-action is-red" title="إلغاء الموعد"><i class="far fa-trash-alt"></i></button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                    <a href="patient_profile.php?id=<?= $appointment['patient_id'] ?>" class="edsm-icon-action" title="ملف المريض"><i class="far fa-user"></i></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+
+                <?php else: /* ---------- عرض التقويم ---------- */ ?>
+                    <div class="flex items-center justify-between mb-4">
+                        <a href="<?= htmlspecialchars(appointmentsUrl(['date' => $prevMonth])) ?>" class="edsm-btn edsm-btn-ghost"><i class="fas fa-chevron-right"></i> الشهر السابق</a>
+                        <h3 class="edsm-card-title" style="font-size: 20px;"><?= $arabicMonths[(int)$monthStart->format('n')] . ' ' . $monthStart->format('Y') ?></h3>
+                        <a href="<?= htmlspecialchars(appointmentsUrl(['date' => $nextMonth])) ?>" class="edsm-btn edsm-btn-ghost">الشهر التالي <i class="fas fa-chevron-left"></i></a>
+                    </div>
+                    <div class="edsm-month">
+                        <?php foreach ($weekDaysLong as $d): ?>
+                            <div class="edsm-month-dow"><?= $d ?></div>
+                        <?php endforeach; ?>
+                        <?php foreach ($gridCells as $cell): ?>
+                            <?php
+                            $cellDate = $cell->format('Y-m-d');
+                            $dayItems = $month_appointments[$cellDate] ?? [];
+                            $cellClasses = ['edsm-month-cell'];
+                            if ($cell->format('m') !== $monthStart->format('m')) $cellClasses[] = 'is-other';
+                            if ($cellDate === $today) $cellClasses[] = 'is-today';
+                            if ($cellDate === $selected_date) $cellClasses[] = 'is-selected';
+                            ?>
+                            <div class="<?= implode(' ', $cellClasses) ?>">
+                                <a href="<?= htmlspecialchars(appointmentsUrl(['view' => 'list', 'range' => 'day', 'date' => $cellDate])) ?>" class="edsm-month-day edsm-num"><?= (int)$cell->format('j') ?></a>
+                                <?php foreach (array_slice($dayItems, 0, 3) as $item): ?>
+                                    <?php [$iLabel, $iCls] = $statusMeta[$item['status']] ?? ['', 'noshow']; ?>
+                                    <a href="<?= htmlspecialchars(appointmentsUrl(['view' => 'list', 'range' => 'day', 'date' => $cellDate])) ?>"
+                                       class="edsm-month-chip edsm-status-<?= $iCls ?>" title="<?= htmlspecialchars($item['patient_name'] . ' - ' . $item['treatment_type'] . ' (' . $iLabel . ')') ?>">
+                                        <span class="edsm-num"><?= date('H:i', strtotime($item['appointment_time'])) ?></span> <?= htmlspecialchars($item['patient_name']) ?>
+                                    </a>
+                                <?php endforeach; ?>
+                                <?php if (count($dayItems) > 3): ?>
+                                    <a href="<?= htmlspecialchars(appointmentsUrl(['view' => 'list', 'range' => 'day', 'date' => $cellDate])) ?>" class="edsm-month-more">+<?= count($dayItems) - 3 ?> أخرى</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endif; ?>
-            </div>
+                </div>
+            </section>
         </div>
     </div>
+
+    <script src="../assets/js/patient-search.js"></script>
+    <script>
+        // بحث عن المريض في نموذج الحجز السريع
+        PatientSearch.attach(document.getElementById('quickPatientSelect'), {
+            inputId: 'quickPatientSearch',
+            placeholder: 'ابحث باسم المريض أو الهاتف...',
+            inputClass: 'edsm-field edsm-field-search'
+        });
+
+        // تغيير الفلاتر يطبّقها مباشرة
+        document.querySelectorAll('#appointmentsFilter select').forEach(select => {
+            select.addEventListener('change', () => select.form.submit());
+        });
+    </script>
 </body>
 </html>

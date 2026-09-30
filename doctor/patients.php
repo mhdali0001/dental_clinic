@@ -12,77 +12,101 @@ $pdo = $db->getConnection();
 
 $doctor_id = $_SESSION['user_id'];
 
-// البحث والفلترة المطورة
-$search = $_GET['search'] ?? '';
+// ---------- المعاملات ----------
+$search = trim($_GET['search'] ?? '');
 $filter = $_GET['filter'] ?? '';
+if ($filter === 'recent') {
+    $filter = 'active'; // الاسم القديم لنفس الفلتر
+}
+$treating_doctor = (int)($_GET['doctor'] ?? 0);
 $sort = $_GET['sort'] ?? 'recent';
-$view = $_GET['view'] ?? 'cards'; // cards or table
+$dir = ($_GET['dir'] ?? '') === 'asc' ? 'asc' : 'desc';
 $page = max(1, intval($_GET['page'] ?? 1));
-$per_page = ($view === 'table') ? 15 : 12;
+$per_page = 15;
 $offset = ($page - 1) * $per_page;
 
-// بناء الاستعلام المحسن
-// ملفات المرضى مشتركة بين جميع الأطباء: تظهر كل ملفات المرضى النشطة
-$where_conditions = ["p.status = 'active'"];
-$join_conditions = [];
-$params = [];
+$filterLabels = [
+    ''          => 'جميع المرضى',
+    'active'    => 'النشطة',
+    'new'       => 'الجدد',
+    'followup'  => 'متابعة',
+    'unpaid'    => 'مستحقات',
+    'chronic'   => 'حالات مزمنة',
+];
 
-// البحث المطور
-if ($search) {
-    $where_conditions[] = "(p.name LIKE ? OR p.phone LIKE ? OR p.email LIKE ? OR p.medical_history LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
+// رابط يحافظ على المعاملات الحالية مع تغيير بعضها
+function patientsUrl(array $changes = []) {
+    $params = array_merge($_GET, $changes);
+    unset($params['view']);
+    $params = array_filter($params, fn($v) => $v !== '' && $v !== null && $v !== 0);
+    return 'patients.php' . ($params ? '?' . http_build_query($params) : '');
 }
 
-// الفلاتر المطورة
-if ($filter === 'recent') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.treatment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY))";
-} elseif ($filter === 'followup') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.next_appointment_date IS NOT NULL AND t.next_appointment_date >= CURDATE())";
-} elseif ($filter === 'unpaid') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.payment_status != 'paid' AND t.cost > 0)";
-} elseif ($filter === 'chronic') {
-    $where_conditions[] = "p.medical_history IS NOT NULL AND p.medical_history != ''";
-} elseif ($filter === 'high_value') {
-    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.cost > 1000)";
+// "نشط" = عولج أو كان له موعد خلال آخر 30 يوماً
+$activeSql = "(EXISTS (SELECT 1 FROM treatments ta WHERE ta.patient_id = p.id AND ta.treatment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY))
+               OR EXISTS (SELECT 1 FROM appointments aa WHERE aa.patient_id = p.id AND aa.appointment_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND CURDATE()))";
+$newSql = "p.registration_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')";
+
+// ---------- شروط القائمة ----------
+// ملفات المرضى مشتركة بين جميع الأطباء
+$where_conditions = ["p.status = 'active'"];
+$params = [];
+
+if ($search !== '') {
+    $where_conditions[] = "(p.name LIKE ? OR p.phone LIKE ? OR p.email LIKE ? OR p.medical_history LIKE ? OR p.id = ?)";
+    array_push($params, "%$search%", "%$search%", "%$search%", "%$search%", (int)ltrim($search, '0'));
+}
+
+switch ($filter) {
+    case 'active':
+        $where_conditions[] = $activeSql;
+        break;
+    case 'new':
+        $where_conditions[] = $newSql;
+        break;
+    case 'followup':
+        $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.next_appointment_date IS NOT NULL AND t.next_appointment_date >= CURDATE())";
+        break;
+    case 'unpaid':
+        $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.payment_status != 'paid' AND t.cost > 0)";
+        break;
+    case 'chronic':
+        $where_conditions[] = "p.medical_history IS NOT NULL AND p.medical_history != ''";
+        break;
+    case 'high_value':
+        $where_conditions[] = "EXISTS (SELECT 1 FROM treatments t WHERE t.patient_id = p.id AND t.cost > 1000)";
+        break;
+}
+
+if ($treating_doctor) {
+    $where_conditions[] = "EXISTS (SELECT 1 FROM treatments td WHERE td.patient_id = p.id AND td.doctor_id = ?)";
+    $params[] = $treating_doctor;
 }
 
 $where_clause = implode(' AND ', $where_conditions);
 
-// ترتيب محسن
-$order_clause = match($sort) {
-    'name' => 'ORDER BY p.name ASC',
-    'recent' => 'ORDER BY p.last_visit_date DESC, p.created_at DESC',
-    'treatments' => 'ORDER BY treatment_count DESC',
-    'revenue' => 'ORDER BY total_spent DESC',
-    'age' => 'ORDER BY p.age DESC',
-    default => 'ORDER BY p.last_visit_date DESC, p.created_at DESC'
-};
+// ترتيب بالنقر على عناوين الأعمدة
+$sortColumns = [
+    'name'   => 'p.name',
+    'file'   => 'p.id',
+    'age'    => 'p.age',
+    'recent' => 'last_visit',
+];
+if (!isset($sortColumns[$sort])) {
+    $sort = 'recent';
+}
+$order_clause = 'ORDER BY ' . $sortColumns[$sort] . ' ' . strtoupper($dir) . ($sort === 'recent' ? ', p.created_at DESC' : '');
 
 try {
-    // عدد المرضى الإجمالي
-    $count_stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM patients p
-        WHERE $where_clause
-    ");
+    $count_stmt = $pdo->prepare("SELECT COUNT(*) FROM patients p WHERE $where_clause");
     $count_stmt->execute($params);
     $total_patients = $count_stmt->fetchColumn();
 
-    // جلب المرضى مع معلومات تفصيلية
     $stmt = $pdo->prepare("
         SELECT p.*,
                COUNT(t.id) as treatment_count,
-               MAX(t.treatment_date) as last_treatment_date,
-               COALESCE(SUM(t.cost), 0) as total_spent,
-               -- كل دفعات المريض (بما فيها الدفعات العامة)، دون تكرار التكلفة لكل دفعة
-               (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.patient_id = p.id) as total_paid,
-               (COALESCE(SUM(t.cost), 0) - (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.patient_id = p.id)) as outstanding_balance,
-               GROUP_CONCAT(DISTINCT t.treatment_type ORDER BY t.treatment_date DESC) as recent_treatments,
-               (SELECT COUNT(*) FROM appointments a WHERE a.patient_id = p.id AND a.appointment_date >= CURDATE()) as upcoming_appointments,
-               (SELECT MIN(next_appointment_date) FROM treatments t2 WHERE t2.patient_id = p.id AND t2.next_appointment_date >= CURDATE()) as next_followup
+               GREATEST(COALESCE(MAX(t.treatment_date), '1000-01-01'), COALESCE(p.last_visit_date, '1000-01-01')) as last_visit,
+               (COALESCE(SUM(t.cost), 0) - (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.patient_id = p.id)) as outstanding_balance
         FROM patients p
         LEFT JOIN treatments t ON p.id = t.patient_id
         WHERE $where_clause
@@ -90,46 +114,63 @@ try {
         $order_clause
         LIMIT $per_page OFFSET $offset
     ");
-
     $stmt->execute($params);
     $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $total_pages = (int)ceil($total_patients / $per_page);
 
-    $total_pages = ceil($total_patients / $per_page);
+    // ملخص المرضى (الشريط الجانبي)
+    $summary = $pdo->query("
+        SELECT COUNT(*) AS total,
+               SUM($activeSql) AS active_now,
+               SUM($newSql) AS new_this_month
+        FROM patients p WHERE p.status = 'active'
+    ")->fetch(PDO::FETCH_ASSOC);
 
-    // الإحصائيات المطورة
-    $stats_stmt = $pdo->prepare("
-        SELECT
-            COUNT(DISTINCT p.id) as total_patients,
-            COUNT(DISTINCT CASE WHEN t.treatment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN p.id END) as recent_patients,
-            COUNT(DISTINCT CASE WHEN t.next_appointment_date >= CURDATE() THEN p.id END) as followup_patients,
-            COUNT(DISTINCT CASE WHEN t.payment_status != 'paid' AND t.cost > 0 THEN p.id END) as unpaid_patients,
-            COUNT(DISTINCT CASE WHEN p.medical_history IS NOT NULL AND p.medical_history != '' THEN p.id END) as chronic_patients,
-            AVG(p.age) as avg_age,
-            SUM(t.cost) as total_revenue,
-            (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay
-             JOIN patients pp ON pp.id = pay.patient_id WHERE pp.status = 'active') as total_collected
-        FROM patients p
-        LEFT JOIN treatments t ON p.id = t.patient_id
-        WHERE p.status = 'active'
-    ");
-    $stats_stmt->execute();
-    $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+    // أحدث المرضى المضافين
+    $latest_patients = $pdo->query("
+        SELECT id, name, gender, created_at, registration_date
+        FROM patients WHERE status = 'active'
+        ORDER BY created_at DESC, id DESC LIMIT 4
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
+    // الأطباء لفلتر "الطبيب المعالج"
+    $doctors = $pdo->query("SELECT id, full_name FROM users WHERE role = 'doctor' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $error_message = "خطأ في قاعدة البيانات: " . $e->getMessage();
-    $patients = [];
+    $patients = $latest_patients = $doctors = [];
     $total_patients = 0;
     $total_pages = 0;
-    $stats = ['total_patients' => 0, 'recent_patients' => 0, 'followup_patients' => 0, 'unpaid_patients' => 0, 'chronic_patients' => 0, 'avg_age' => 0, 'total_revenue' => 0, 'total_collected' => 0];
+    $summary = ['total' => 0, 'active_now' => 0, 'new_this_month' => 0];
 }
+
+// مربع البحث بجانب عنوان الصفحة (يحافظ على الفلاتر الحالية)
+$hidden = '';
+foreach (['filter' => $filter, 'doctor' => $treating_doctor ?: '', 'sort' => $_GET['sort'] ?? '', 'dir' => $_GET['dir'] ?? ''] as $k => $v) {
+    if ($v !== '') {
+        $hidden .= '<input type="hidden" name="' . $k . '" value="' . htmlspecialchars($v) . '">';
+    }
+}
+$pageHeadActions = '
+    <form method="GET" class="edsm-head-search" role="search">' . $hidden . '
+        <i class="fas fa-search"></i>
+        <input type="text" name="search" value="' . htmlspecialchars($search) . '" placeholder="البحث عن مريض بالاسم أو الرقم أو الهاتف..." aria-label="البحث عن مريض">
+    </form>';
 
 // Header configuration
 $pageTitle = 'إدارة المرضى';
 $pageIcon = 'fas fa-users';
-$pageSubtitle = 'إجمالي المرضى: ' . number_format($stats['total_patients'] ?? 0) . ' مريض';
+$pageSubtitle = 'ملفات المرضى مشتركة بين جميع الأطباء';
 $currentPage = 'patients';
-?>
 
+// عنوان عمود قابل للترتيب
+function sortHeader($label, $key, $sort, $dir) {
+    $isActive = $sort === $key;
+    $nextDir = $isActive && $dir === 'desc' ? 'asc' : 'desc';
+    $icon = $isActive ? ($dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+    return '<a href="' . htmlspecialchars(patientsUrl(['sort' => $key, 'dir' => $nextDir, 'page' => null])) . '" class="edsm-sort' . ($isActive ? ' is-active' : '') . '">'
+         . $label . ' <i class="fas ' . $icon . '"></i></a>';
+}
+?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -138,527 +179,154 @@ $currentPage = 'patients';
     <title><?= $pageTitle ?> - عيادة الأسنان</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .patient-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-right: 4px solid transparent;
-        }
-        .patient-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            border-right-color: #3b82f6;
-        }
-        .medical-alert {
-            background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
-            border: 1px solid #fca5a5;
-        }
-        .high-value { border-right-color: #10b981 !important; }
-        .needs-followup { border-right-color: #f59e0b !important; }
-        .unpaid-balance { border-right-color: #ef4444 !important; }
-        .chronic-condition { border-right-color: #8b5cf6 !important; }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: all 0.3s ease;
-        }
-        .stat-card:hover { transform: scale(1.02); }
-
-        .search-container {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            backdrop-filter: blur(10px);
-        }
-
-        .filter-btn {
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        .filter-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        .filter-btn:hover::before { left: 100%; }
-
-        .view-toggle {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            border-radius: 50px;
-            padding: 4px;
-        }
-
-        .patient-avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: white;
-            text-transform: uppercase;
-        }
-
-        .treatment-tag {
-            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            color: #4338ca;
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            display: inline-block;
-            margin: 1px;
-        }
-
-        .quick-action-btn {
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .quick-action-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        .loading-skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-        }
-    </style>
 </head>
 <body class="bg-gray-50">
     <?php include 'includes/doctor_header.php'; ?>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <?php if (isset($error_message)): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 fade-in">
-                <i class="fas fa-exclamation-triangle ml-1"></i>
-                <?= $error_message ?>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-5">
+                <i class="fas fa-exclamation-triangle ml-1"></i> <?= htmlspecialchars($error_message) ?>
             </div>
         <?php endif; ?>
 
-        <!-- Enhanced Statistics Dashboard -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="stat-card text-white rounded-xl p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-blue-100 text-sm">إجمالي المرضى</p>
-                        <p class="text-3xl font-bold"><?= number_format($stats['total_patients']) ?></p>
-                        <p class="text-blue-200 text-xs mt-1">متوسط العمر: <?= round($stats['avg_age']) ?> سنة</p>
-                    </div>
-                    <div class="bg-white/20 p-3 rounded-full">
-                        <i class="fas fa-users text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-lg p-6 border-r-4 border-green-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">مرضى حديثين</p>
-                        <p class="text-3xl font-bold text-green-600"><?= $stats['recent_patients'] ?></p>
-                        <p class="text-xs text-gray-500 mt-1">آخر 30 يوم</p>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full relative">
-                        <i class="fas fa-user-plus text-green-600 text-xl"></i>
-                        <?php if ($stats['recent_patients'] > 0): ?>
-                            <span class="notification-badge"><?= min($stats['recent_patients'], 99) ?></span>
-                        <?php endif; ?>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            <!-- ================= الشريط الجانبي ================= -->
+            <aside class="space-y-6 order-2 lg:order-none">
+                <div class="edsm-card fade-in">
+                    <h3 class="edsm-card-title" style="font-size: 17px; margin-bottom: 12px;">ملخص المرضى</h3>
+                    <div class="edsm-summary">
+                        <a href="<?= htmlspecialchars(patientsUrl(['filter' => null, 'page' => null])) ?>" class="edsm-summary-row">
+                            <span>إجمالي الملفات:</span>
+                            <strong class="edsm-num"><?= number_format((int)$summary['total']) ?></strong>
+                        </a>
+                        <a href="<?= htmlspecialchars(patientsUrl(['filter' => 'active', 'page' => null])) ?>" class="edsm-summary-row">
+                            <span><i class="fas fa-info-circle text-teal-500" title="عولجوا أو كان لهم موعد خلال آخر 30 يوماً"></i> النشطة حالياً:</span>
+                            <strong class="edsm-num"><?= number_format((int)$summary['active_now']) ?></strong>
+                        </a>
+                        <a href="<?= htmlspecialchars(patientsUrl(['filter' => 'new', 'page' => null])) ?>" class="edsm-summary-row">
+                            <span><i class="fas fa-user-friends text-gray-400"></i> مرضى جدد هذا الشهر:</span>
+                            <strong class="edsm-num"><?= number_format((int)$summary['new_this_month']) ?></strong>
+                        </a>
                     </div>
                 </div>
-                <div class="mt-4">
-                    <a href="?filter=recent&view=<?= $view ?>" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                        عرض المرضى الحديثين <i class="fas fa-arrow-left mr-1"></i>
-                    </a>
-                </div>
-            </div>
 
-            <div class="bg-white rounded-xl shadow-lg p-6 border-r-4 border-yellow-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">يحتاجون متابعة</p>
-                        <p class="text-3xl font-bold text-yellow-600"><?= $stats['followup_patients'] ?></p>
-                        <p class="text-xs text-gray-500 mt-1">مواعيد مجدولة</p>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded-full relative">
-                        <i class="fas fa-user-clock text-yellow-600 text-xl"></i>
-                        <?php if ($stats['followup_patients'] > 0): ?>
-                            <span class="notification-badge bg-yellow-500"><?= min($stats['followup_patients'], 99) ?></span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <a href="?filter=followup&view=<?= $view ?>" class="text-yellow-600 hover:text-yellow-800 text-sm font-medium">
-                        عرض المتابعات <i class="fas fa-arrow-left mr-1"></i>
-                    </a>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-lg p-6 border-r-4 border-red-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">رصيد مستحق</p>
-                        <p class="text-3xl font-bold text-red-600"><?= $stats['unpaid_patients'] ?></p>
-                        <p class="text-xs text-gray-500 mt-1">مريض</p>
-                    </div>
-                    <div class="bg-red-100 p-3 rounded-full relative">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                        <?php if ($stats['unpaid_patients'] > 0): ?>
-                            <span class="notification-badge"><?= min($stats['unpaid_patients'], 99) ?></span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <a href="?filter=unpaid&view=<?= $view ?>" class="text-red-600 hover:text-red-800 text-sm font-medium">
-                        عرض المستحقات <i class="fas fa-arrow-left mr-1"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Enhanced Search and Filters -->
-        <div class="search-container rounded-xl shadow-lg p-6 mb-8">
-            <div class="flex flex-col lg:flex-row gap-4 items-center">
-                <!-- Search Bar -->
-                <div class="flex-1 relative">
-                    <form method="GET" class="relative">
-                        <input type="text"
-                               name="search"
-                               value="<?= htmlspecialchars($search) ?>"
-                               placeholder="البحث بالاسم، الهاتف، البريد أو التاريخ المرضي..."
-                               class="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm">
-                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                        <?php if ($filter): ?>
-                            <input type="hidden" name="filter" value="<?= htmlspecialchars($filter) ?>">
-                        <?php endif; ?>
-                        <?php if ($sort): ?>
-                            <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
-                        <?php endif; ?>
-                        <?php if ($view): ?>
-                            <input type="hidden" name="view" value="<?= htmlspecialchars($view) ?>">
-                        <?php endif; ?>
-                    </form>
-                </div>
-
-                <a href="../nurse/patients.php?action=add"
-                   class="bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-xl shadow-sm transition flex items-center whitespace-nowrap">
-                    <i class="fas fa-user-plus ml-2"></i>
-                    إضافة مريض
-                </a>
-
-                <!-- View Toggle -->
-                <div class="view-toggle">
-                    <a href="?<?= http_build_query(array_merge($_GET, ['view' => 'cards'])) ?>"
-                       class="<?= $view === 'cards' ? 'bg-white text-purple-600' : 'text-white' ?> px-4 py-2 rounded-full transition">
-                        <i class="fas fa-th-large"></i>
-                    </a>
-                    <a href="?<?= http_build_query(array_merge($_GET, ['view' => 'table'])) ?>"
-                       class="<?= $view === 'table' ? 'bg-white text-purple-600' : 'text-white' ?> px-4 py-2 rounded-full transition">
-                        <i class="fas fa-list"></i>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Enhanced Filters -->
-            <div class="mt-4 flex flex-wrap gap-2">
-                <a href="?" class="filter-btn <?= !$filter ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 rounded-full text-sm transition border">
-                    <i class="fas fa-list ml-1"></i>
-                    الكل (<?= number_format($stats['total_patients']) ?>)
-                </a>
-                <a href="?filter=recent&view=<?= $view ?><?= $search ? '&search=' . urlencode($search) : '' ?>"
-                   class="filter-btn <?= $filter === 'recent' ? 'bg-green-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 rounded-full text-sm transition border">
-                    <i class="fas fa-clock ml-1"></i>
-                    حديثين (<?= $stats['recent_patients'] ?>)
-                </a>
-                <a href="?filter=followup&view=<?= $view ?><?= $search ? '&search=' . urlencode($search) : '' ?>"
-                   class="filter-btn <?= $filter === 'followup' ? 'bg-yellow-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 rounded-full text-sm transition border">
-                    <i class="fas fa-calendar-check ml-1"></i>
-                    متابعة (<?= $stats['followup_patients'] ?>)
-                </a>
-                <a href="?filter=unpaid&view=<?= $view ?><?= $search ? '&search=' . urlencode($search) : '' ?>"
-                   class="filter-btn <?= $filter === 'unpaid' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 rounded-full text-sm transition border">
-                    <i class="fas fa-exclamation-triangle ml-1"></i>
-                    مستحقات (<?= $stats['unpaid_patients'] ?>)
-                </a>
-                <a href="?filter=chronic&view=<?= $view ?><?= $search ? '&search=' . urlencode($search) : '' ?>"
-                   class="filter-btn <?= $filter === 'chronic' ? 'bg-purple-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' ?> px-4 py-2 rounded-full text-sm transition border">
-                    <i class="fas fa-heartbeat ml-1"></i>
-                    حالات مزمنة (<?= $stats['chronic_patients'] ?>)
-                </a>
-            </div>
-
-            <!-- Sort Options -->
-            <div class="mt-4 flex flex-wrap gap-2">
-                <span class="text-sm font-medium text-gray-600">ترتيب حسب:</span>
-                <a href="?sort=recent&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'sort', ARRAY_FILTER_USE_KEY)) ?>"
-                   class="<?= $sort === 'recent' ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-blue-600' ?> text-sm transition">
-                    الأحدث
-                </a>
-                <span class="text-gray-300">|</span>
-                <a href="?sort=name&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'sort', ARRAY_FILTER_USE_KEY)) ?>"
-                   class="<?= $sort === 'name' ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-blue-600' ?> text-sm transition">
-                    الاسم
-                </a>
-                <span class="text-gray-300">|</span>
-                <a href="?sort=treatments&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'sort', ARRAY_FILTER_USE_KEY)) ?>"
-                   class="<?= $sort === 'treatments' ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-blue-600' ?> text-sm transition">
-                    عدد العلاجات
-                </a>
-                <span class="text-gray-300">|</span>
-                <a href="?sort=revenue&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'sort', ARRAY_FILTER_USE_KEY)) ?>"
-                   class="<?= $sort === 'revenue' ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-blue-600' ?> text-sm transition">
-                    الإيرادات
-                </a>
-            </div>
-        </div>
-
-        <!-- Patients Display -->
-        <?php if (empty($patients)): ?>
-            <div class="text-center py-16">
-                <div class="w-32 h-32 mx-auto mb-6 text-gray-300">
-                    <i class="fas fa-user-friends text-8xl"></i>
-                </div>
-                <h3 class="text-xl font-medium text-gray-900 mb-2">لا توجد نتائج</h3>
-                <p class="text-gray-600 mb-6">
-                    <?php if ($search || $filter): ?>
-                        لم يتم العثور على مرضى تطابق معايير البحث.
+                <div class="edsm-card fade-in">
+                    <h3 class="edsm-card-title" style="font-size: 17px; margin-bottom: 8px;">أحدث المرضى المضافين</h3>
+                    <?php if (empty($latest_patients)): ?>
+                        <p class="text-sm text-gray-500 py-3">لا يوجد مرضى بعد</p>
                     <?php else: ?>
-                        لم يتم تسجيل أي مرضى بعد.
-                    <?php endif; ?>
-                </p>
-                <?php if ($search || $filter): ?>
-                    <a href="?" class="inline-flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
-                        <i class="fas fa-undo ml-2"></i>
-                        عرض جميع المرضى
-                    </a>
-                <?php endif; ?>
-            </div>
-        <?php else: ?>
-
-            <?php if ($view === 'cards'): ?>
-                <!-- Cards View -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <?php foreach ($patients as $patient): ?>
-                        <?php
-                        $card_class = 'patient-card';
-                        if ($patient['outstanding_balance'] > 0) $card_class .= ' unpaid-balance';
-                        elseif ($patient['next_followup']) $card_class .= ' needs-followup';
-                        elseif ($patient['total_spent'] > 2000) $card_class .= ' high-value';
-                        elseif ($patient['medical_history']) $card_class .= ' chronic-condition';
-                        ?>
-                        <div class="<?= $card_class ?> bg-white rounded-xl shadow-lg p-6">
-                            <!-- Patient Header -->
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="flex items-center">
-                                    <div class="patient-avatar">
-                                        <?= mb_substr($patient['name'], 0, 2, 'UTF-8') ?>
-                                    </div>
-                                    <div class="mr-4">
-                                        <h3 class="text-lg font-bold text-gray-900">
-                                            <?= htmlspecialchars($patient['name']) ?>
-                                        </h3>
-                                        <div class="flex items-center text-sm text-gray-500 mt-1">
-                                            <i class="fas fa-phone text-xs ml-1"></i>
-                                            <?= htmlspecialchars($patient['phone']) ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end">
-                                    <span class="text-xs text-gray-500"><?= $patient['age'] ?> سنة</span>
-                                    <span class="text-xs text-gray-500"><?= $patient['gender'] === 'male' ? 'ذكر' : 'أنثى' ?></span>
-                                </div>
-                            </div>
-
-                            <!-- Patient Stats -->
-                            <div class="grid grid-cols-3 gap-4 mb-4">
-                                <div class="text-center">
-                                    <div class="text-xl font-bold text-blue-600"><?= $patient['treatment_count'] ?></div>
-                                    <div class="text-xs text-gray-500">علاجات</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-xl font-bold text-green-600"><?= number_format($patient['total_spent']) ?></div>
-                                    <div class="text-xs text-gray-500">إجمالي</div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-xl font-bold <?= $patient['outstanding_balance'] > 0 ? 'text-red-600' : 'text-green-600' ?>">
-                                        <?= number_format($patient['outstanding_balance']) ?>
-                                    </div>
-                                    <div class="text-xs text-gray-500">متبقي</div>
-                                </div>
-                            </div>
-
-                            <!-- Recent Treatments -->
-                            <?php if ($patient['recent_treatments']): ?>
-                                <div class="mb-4">
-                                    <p class="text-xs text-gray-500 mb-2">آخر العلاجات:</p>
-                                    <div class="flex flex-wrap gap-1">
-                                        <?php foreach (explode(',', $patient['recent_treatments']) as $treatment): ?>
-                                            <span class="treatment-tag"><?= htmlspecialchars(trim($treatment)) ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Medical Alerts -->
-                            <?php if ($patient['medical_history'] || $patient['allergies']): ?>
-                                <div class="medical-alert rounded-lg p-3 mb-4">
-                                    <div class="flex items-start">
-                                        <i class="fas fa-exclamation-triangle text-red-500 mt-0.5 ml-2 text-sm"></i>
-                                        <div class="flex-1 text-sm">
-                                            <?php if ($patient['medical_history']): ?>
-                                                <div class="text-red-800">
-                                                    <strong>التاريخ المرضي:</strong>
-                                                    <?= htmlspecialchars(mb_substr($patient['medical_history'], 0, 100, 'UTF-8')) ?>
-                                                    <?= mb_strlen($patient['medical_history'], 'UTF-8') > 100 ? '...' : '' ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            <?php if ($patient['allergies']): ?>
-                                                <div class="text-red-800 mt-1">
-                                                    <strong>الحساسية:</strong>
-                                                    <?= htmlspecialchars($patient['allergies']) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Next Follow-up -->
-                            <?php if ($patient['next_followup']): ?>
-                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                                    <div class="flex items-center text-sm text-yellow-800">
-                                        <i class="fas fa-calendar-check ml-2"></i>
-                                        <strong>موعد المتابعة:</strong>
-                                        <span class="mr-2"><?= date('d/m/Y', strtotime($patient['next_followup'])) ?></span>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Action Buttons -->
-                            <div class="grid grid-cols-2 gap-2">
-                                <a href="patient_profile.php?id=<?= $patient['id'] ?>"
-                                   class="quick-action-btn bg-blue-500 hover:bg-blue-600 text-white text-center py-2 px-3 rounded-lg text-sm transition">
-                                    <i class="fas fa-user-circle ml-1"></i>
-                                    الملف الشخصي
+                        <div class="divide-y divide-gray-100">
+                            <?php foreach ($latest_patients as $latest): ?>
+                                <a href="patient_profile.php?id=<?= $latest['id'] ?>" class="edsm-upcoming">
+                                    <span class="flex-1 min-w-0">
+                                        <span class="edsm-row-title block truncate"><?= htmlspecialchars($latest['name']) ?></span>
+                                        <span class="edsm-row-meta block edsm-num">
+                                            <?= $latest['created_at'] ? date('d/m/Y H:i', strtotime($latest['created_at'])) : date('d/m/Y', strtotime($latest['registration_date'])) ?>
+                                        </span>
+                                    </span>
+                                    <span class="edsm-avatar-soft is-violet"><i class="fas fa-tooth"></i></span>
                                 </a>
-                                <a href="treatment_new.php?patient_id=<?= $patient['id'] ?>"
-                                   class="quick-action-btn bg-green-500 hover:bg-green-600 text-white text-center py-2 px-3 rounded-lg text-sm transition">
-                                    <i class="fas fa-plus ml-1"></i>
-                                    علاج جديد
-                                </a>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </aside>
+
+            <!-- ================= قائمة المرضى ================= -->
+            <section class="edsm-card lg:col-span-3 order-1 lg:order-none fade-in" style="padding: 18px 20px 20px;">
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <nav class="edsm-pills" aria-label="تصفية المرضى">
+                        <?php foreach ($filterLabels as $key => $label): ?>
+                            <a href="<?= htmlspecialchars(patientsUrl(['filter' => $key, 'page' => null])) ?>" class="<?= $filter === $key ? 'active' : '' ?>"><?= $label ?></a>
+                        <?php endforeach; ?>
+                    </nav>
+                    <form method="GET" style="width: 200px;">
+                        <?php foreach (['search' => $search, 'filter' => $filter, 'sort' => $_GET['sort'] ?? '', 'dir' => $_GET['dir'] ?? ''] as $k => $v): ?>
+                            <?php if ($v !== ''): ?><input type="hidden" name="<?= $k ?>" value="<?= htmlspecialchars($v) ?>"><?php endif; ?>
+                        <?php endforeach; ?>
+                        <select name="doctor" class="edsm-field" onchange="this.form.submit()" aria-label="تصفية حسب الطبيب المعالج">
+                            <option value="">حسب الطبيب المعالج</option>
+                            <?php foreach ($doctors as $doc): ?>
+                                <option value="<?= $doc['id'] ?>" <?= $treating_doctor === (int)$doc['id'] ? 'selected' : '' ?>><?= htmlspecialchars($doc['full_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </form>
+                    <a href="../nurse/patients.php?action=add" class="edsm-btn edsm-btn-lg" style="margin-inline-start: auto;">
+                        <i class="fas fa-plus"></i> إضافة مريض جديد
+                    </a>
                 </div>
 
-            <?php else: ?>
-                <!-- Table View -->
-                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+                <?php if ($search !== '' || $filter !== '' || $treating_doctor): ?>
+                    <div class="flex flex-wrap items-center gap-2 mb-3 text-sm text-gray-600">
+                        <span>عرض <strong class="edsm-num"><?= number_format($total_patients) ?></strong> نتيجة</span>
+                        <?php if ($search !== ''): ?><span class="edsm-chip">بحث: <?= htmlspecialchars($search) ?></span><?php endif; ?>
+                        <a href="patients.php" class="edsm-link text-sm"><i class="fas fa-times"></i> مسح التصفية</a>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (empty($patients)): ?>
+                    <div class="edsm-empty">
+                        <div class="edsm-empty-icon"><i class="fas fa-users"></i></div>
+                        <p>لا يوجد مرضى مطابقون</p>
+                        <a href="../nurse/patients.php?action=add" class="edsm-btn edsm-btn-lg"><i class="fas fa-plus"></i> إضافة مريض جديد</a>
+                    </div>
+                <?php else: ?>
+                    <div class="edsm-table-wrap">
+                        <table class="edsm-table edsm-table-lg">
+                            <thead>
                                 <tr>
-                                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المريض</th>
-                                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">معلومات التواصل</th>
-                                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإحصائيات</th>
-                                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
-                                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
+                                    <th><?= sortHeader('اسم المريض', 'name', $sort, $dir) ?></th>
+                                    <th><?= sortHeader('رقم الملف', 'file', $sort, $dir) ?></th>
+                                    <th><?= sortHeader('العمر', 'age', $sort, $dir) ?></th>
+                                    <th>الجنس</th>
+                                    <th>رقم الهاتف</th>
+                                    <th><?= sortHeader('آخر زيارة', 'recent', $sort, $dir) ?></th>
+                                    <th class="text-center">الحالة الطبية</th>
+                                    <th class="text-center">إجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody>
                                 <?php foreach ($patients as $patient): ?>
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center">
-                                                <div class="patient-avatar w-10 h-10 text-sm">
-                                                    <?= mb_substr($patient['name'], 0, 2, 'UTF-8') ?>
+                                    <?php
+                                    $lastVisit = $patient['last_visit'] > '1000-01-01' ? $patient['last_visit'] : null;
+                                    $hasHistory = !empty($patient['medical_history']);
+                                    $hasAllergies = !empty($patient['allergies']);
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <a href="patient_profile.php?id=<?= $patient['id'] ?>" class="font-bold text-gray-800 hover:text-blue-600"><?= htmlspecialchars($patient['name']) ?></a>
+                                            <?php if ($patient['outstanding_balance'] > 0): ?>
+                                                <div class="text-xs text-red-600 mt-0.5" title="الرصيد المتبقي">
+                                                    <i class="fas fa-wallet"></i> <span class="edsm-num"><?= number_format($patient['outstanding_balance']) ?></span> ل.س
                                                 </div>
-                                                <div class="mr-4">
-                                                    <div class="text-sm font-medium text-gray-900">
-                                                        <?= htmlspecialchars($patient['name']) ?>
-                                                    </div>
-                                                    <div class="text-sm text-gray-500">
-                                                        <?= $patient['age'] ?> سنة • <?= $patient['gender'] === 'male' ? 'ذكر' : 'أنثى' ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="text-sm text-gray-900"><?= htmlspecialchars($patient['phone']) ?></div>
-                                            <?php if ($patient['email']): ?>
-                                                <div class="text-sm text-gray-500"><?= htmlspecialchars($patient['email']) ?></div>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="px-6 py-4">
-                                            <div class="text-sm text-gray-900">
-                                                <?= $patient['treatment_count'] ?> علاج • <?= number_format($patient['total_spent']) ?> ل.س
-                                            </div>
-                                            <div class="text-sm <?= $patient['outstanding_balance'] > 0 ? 'text-red-600' : 'text-green-600' ?>">
-                                                متبقي: <?= number_format($patient['outstanding_balance']) ?> ل.س
-                                            </div>
+                                        <td class="edsm-num"><?= str_pad($patient['id'], 6, '0', STR_PAD_LEFT) ?></td>
+                                        <td class="edsm-num"><?= $patient['age'] !== null ? (int)$patient['age'] : '—' ?></td>
+                                        <td><?= $patient['gender'] === 'male' ? 'ذكر' : 'أنثى' ?></td>
+                                        <td class="edsm-num" dir="ltr" style="text-align: right;">
+                                            <a href="tel:<?= htmlspecialchars($patient['phone']) ?>" class="hover:text-blue-600"><?= htmlspecialchars($patient['phone']) ?></a>
                                         </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-col gap-1">
-                                                <?php if ($patient['outstanding_balance'] > 0): ?>
-                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                                        <i class="fas fa-exclamation-triangle ml-1"></i>
-                                                        مستحقات
-                                                    </span>
+                                        <td class="edsm-num"><?= $lastVisit ? date('d/m/Y', strtotime($lastVisit)) : '<span class="text-gray-400">—</span>' ?></td>
+                                        <td>
+                                            <div class="flex items-center justify-center gap-1">
+                                                <?php if ($hasHistory): ?>
+                                                    <span class="edsm-med-icon is-red" title="التاريخ المرضي: <?= htmlspecialchars($patient['medical_history']) ?>"><i class="fas fa-heartbeat"></i></span>
                                                 <?php endif; ?>
-                                                <?php if ($patient['next_followup']): ?>
-                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                        <i class="fas fa-calendar-check ml-1"></i>
-                                                        متابعة
-                                                    </span>
+                                                <?php if ($hasAllergies): ?>
+                                                    <span class="edsm-med-icon is-violet" title="الحساسية: <?= htmlspecialchars($patient['allergies']) ?>"><i class="fas fa-allergies"></i></span>
                                                 <?php endif; ?>
-                                                <?php if ($patient['medical_history']): ?>
-                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                                                        <i class="fas fa-heartbeat ml-1"></i>
-                                                        مزمن
-                                                    </span>
+                                                <?php if (!$hasHistory && !$hasAllergies): ?>
+                                                    <span class="edsm-med-icon is-green" title="لا توجد ملاحظات طبية"><i class="fas fa-shield-alt"></i></span>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex gap-2">
-                                                <a href="patient_profile.php?id=<?= $patient['id'] ?>"
-                                                   class="text-blue-600 hover:text-blue-900 text-sm">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="treatment_new.php?patient_id=<?= $patient['id'] ?>"
-                                                   class="text-green-600 hover:text-green-900 text-sm">
-                                                    <i class="fas fa-plus"></i>
-                                                </a>
+                                        <td>
+                                            <div class="edsm-actions-cell">
+                                                <a href="patient_profile.php?id=<?= $patient['id'] ?>" class="edsm-icon-action is-blue" title="ملف المريض"><i class="far fa-eye"></i></a>
+                                                <a href="patient_edit.php?id=<?= $patient['id'] ?>" class="edsm-icon-action is-blue" title="تعديل البيانات"><i class="fas fa-pen"></i></a>
+                                                <a href="treatment_new.php?patient_id=<?= $patient['id'] ?>" class="edsm-icon-action is-green" title="علاج جديد"><i class="fas fa-tooth"></i></a>
                                             </div>
                                         </td>
                                     </tr>
@@ -666,110 +334,40 @@ $currentPage = 'patients';
                             </tbody>
                         </table>
                     </div>
-                </div>
-            <?php endif; ?>
 
-        <?php endif; ?>
-
-        <!-- Enhanced Pagination -->
-        <?php if ($total_pages > 1): ?>
-            <div class="mt-8 flex justify-center">
-                <nav class="flex items-center space-x-2 space-x-reverse bg-white rounded-xl shadow-lg px-4 py-3">
-                    <?php if ($page > 1): ?>
-                        <a href="?page=<?= $page - 1 ?>&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'page', ARRAY_FILTER_USE_KEY)) ?>"
-                           class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition">
-                            <i class="fas fa-chevron-right"></i>
-                        </a>
-                    <?php endif; ?>
-
-                    <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                        <?php if ($i == $page): ?>
-                            <span class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium">
-                                <?= $i ?>
-                            </span>
-                        <?php else: ?>
-                            <a href="?page=<?= $i ?>&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'page', ARRAY_FILTER_USE_KEY)) ?>"
-                               class="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition">
-                                <?= $i ?>
-                            </a>
+                    <!-- الترقيم -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+                        <div class="text-sm text-gray-500">
+                            عرض <span class="edsm-num"><?= $offset + 1 ?>–<?= min($offset + $per_page, $total_patients) ?></span>
+                            من أصل <span class="edsm-num"><?= number_format($total_patients) ?></span> مريض
+                        </div>
+                        <?php if ($total_pages > 1): ?>
+                            <nav class="edsm-pagination" aria-label="الصفحات">
+                                <a href="<?= htmlspecialchars(patientsUrl(['page' => $page - 1])) ?>" class="<?= $page <= 1 ? 'is-disabled' : '' ?>" aria-label="السابق"><i class="fas fa-chevron-right"></i></a>
+                                <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
+                                    <a href="<?= htmlspecialchars(patientsUrl(['page' => $i])) ?>" class="edsm-num <?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
+                                <?php endfor; ?>
+                                <a href="<?= htmlspecialchars(patientsUrl(['page' => $page + 1])) ?>" class="<?= $page >= $total_pages ? 'is-disabled' : '' ?>" aria-label="التالي"><i class="fas fa-chevron-left"></i></a>
+                            </nav>
                         <?php endif; ?>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $total_pages): ?>
-                        <a href="?page=<?= $page + 1 ?>&<?= http_build_query(array_filter($_GET, fn($k) => $k !== 'page', ARRAY_FILTER_USE_KEY)) ?>"
-                           class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition">
-                            <i class="fas fa-chevron-left"></i>
-                        </a>
-                    <?php endif; ?>
-                </nav>
-            </div>
-        <?php endif; ?>
-
-        <!-- Results Info -->
-        <div class="mt-6 text-center">
-            <p class="text-sm text-gray-600">
-                عرض <?= count($patients) ?> من أصل <?= number_format($total_patients) ?> مريض
-                <?php if ($search): ?>
-                    | نتائج البحث عن: <strong>"<?= htmlspecialchars($search) ?>"</strong>
+                    </div>
                 <?php endif; ?>
-                <?php if ($filter): ?>
-                    | الفلتر: <strong><?= $filter ?></strong>
-                <?php endif; ?>
-            </p>
+            </section>
         </div>
     </div>
 
-    <!-- Enhanced JavaScript -->
     <script>
-        // Auto-submit search form
-        const searchInput = document.querySelector('input[name="search"]');
-        let searchTimeout;
-
-        searchInput?.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.form.submit();
-            }, 1000);
+        // البحث يُطبَّق تلقائياً بعد التوقف عن الكتابة
+        const headSearch = document.querySelector('.edsm-head-search input[name="search"]');
+        let searchTimer;
+        headSearch?.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => this.form.submit(), 800);
         });
-
-        // Smooth animations
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animate cards on scroll
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px'
-            };
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '0';
-                        entry.target.style.transform = 'translateY(20px)';
-                        entry.target.style.transition = 'all 0.6s ease';
-
-                        setTimeout(() => {
-                            entry.target.style.opacity = '1';
-                            entry.target.style.transform = 'translateY(0)';
-                        }, Math.random() * 200);
-                    }
-                });
-            }, observerOptions);
-
-            document.querySelectorAll('.patient-card').forEach(card => {
-                observer.observe(card);
-            });
-        });
-
-        // Enhanced filter animations
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.05)';
-            });
-
-            btn.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1)';
-            });
-        });
+        if (headSearch && headSearch.value) {
+            headSearch.focus();
+            headSearch.setSelectionRange(headSearch.value.length, headSearch.value.length);
+        }
     </script>
 </body>
 </html>
