@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>علاج جديد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+
+  :root{
+    --ink:#17333b; --ink-2:#5b7078; --line:#dde6e8;
+    --bg:#eef3f4; --surface:#ffffff; --soft:#f6f9f9;
+    --enamel:#fcfaf4; --enamel-edge:#b8c2c3;
+    --milk:#edf4fb; --milk-edge:#86a8c4;
+    --gum:#f7e9e7;
+    --accent:#0e7580; --accent-soft:#dcefef; --focus:#e89b1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;color:var(--ink);padding:24px}
+
+  .dc{max-width:1180px;margin:auto;background:var(--surface);border-radius:18px;border:1px solid var(--line);padding:24px}
+  .dc-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .dc-head h2{margin:0;font-size:1.3rem;font-weight:700}
+  .dc-head p{margin:4px 0 0;color:var(--ink-2);font-size:.9rem}
+
+  .seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+  .seg button{font:inherit;font-size:.92rem;font-weight:600;border:0;background:transparent;color:var(--ink-2);padding:8px 16px;border-radius:9px;cursor:pointer}
+  .seg button small{display:block;font-weight:400;font-size:.72rem;opacity:.8}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(23,51,59,.12)}
+  .seg button:focus-visible,.btn:focus-visible,.quad:focus-visible,.chip-x:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .dc-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px}
+  .chart{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:12px 12px 16px}
+  .chart svg{direction:ltr;display:block;width:100%;height:auto;max-height:640px}
+
+  /* teeth */
+  .tooth{cursor:pointer;outline:none}
+  .tooth .crown{fill:var(--enamel);stroke:var(--enamel-edge);stroke-width:1.3;transition:fill .15s,stroke .15s}
+  .tooth .groove{fill:none;stroke:#c9cfcc;stroke-width:1.1;stroke-linecap:round}
+  .tooth.prim .crown{fill:var(--milk);stroke:var(--milk-edge);stroke-dasharray:3 2}
+  .tooth.prim .groove{stroke:#b7cbdb}
+  .tooth:hover .crown{fill:var(--accent-soft);stroke:var(--accent)}
+  .tooth.on .crown{fill:var(--accent);stroke:#09565e;stroke-dasharray:none}
+  .tooth.on .groove{stroke:rgba(255,255,255,.55)}
+  .tooth:focus-visible .crown{stroke:var(--focus);stroke-width:2.6}
+  .num{font-size:12px;font-weight:600;fill:var(--ink-2);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+  .tooth.on .num{fill:var(--accent);font-weight:700}
+  .gum{fill:none;stroke:var(--gum);stroke-linecap:round;stroke-linejoin:round}
+  .mid{stroke:#b9c8cb;stroke-dasharray:4 5}
+  .side{font-size:12px;fill:var(--ink-2)}
+  .jaw{font-size:13px;font-weight:600;fill:#8aa0a6;text-anchor:middle}
+
+  .tooth{animation:rise .35s ease-out both;animation-delay:calc(var(--i) * 14ms)}
+  @keyframes rise{from{opacity:0}to{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.tooth{animation:none}.tooth .crown{transition:none}}
+
+  .legend{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2);margin:4px 0 12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:14px;height:14px;border-radius:4px;border:1.3px solid var(--enamel-edge);background:var(--enamel)}
+  .sw.m{background:var(--milk);border:1.3px dashed var(--milk-edge)}
+  .sw.s{background:var(--accent);border-color:#09565e}
+
+  .quads{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .quad{font:inherit;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--ink);text-align:right}
+  .quad:hover{border-color:var(--accent)}
+  .quad b{font-size:.86rem;font-weight:600}
+  .quad small{display:block;color:var(--ink-2);font-size:.75rem}
+  .quad .cnt{font-size:.78rem;color:var(--ink-2);background:var(--soft);border-radius:20px;padding:2px 9px;white-space:nowrap}
+  .quad.full{border-color:var(--accent);background:var(--accent-soft)}
+  .quad.full .cnt{background:var(--accent);color:#fff}
+
+  /* side panel */
+  .panel{border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;align-self:start;position:sticky;top:16px}
+  .panel h3{margin:0;font-size:1.02rem;display:flex;justify-content:space-between;align-items:center}
+  .panel h3 span{font-size:.8rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:2px 10px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{font:inherit;font-size:.86rem;font-weight:600;border-radius:9px;padding:9px 10px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#0b626b;color:#fff}
+  .btn.ghost{color:#a33b3b}
+  .btn.ghost:hover{border-color:#a33b3b;color:#a33b3b}
+  .list{list-style:none;margin:0;padding:0;max-height:330px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+  .list li{display:flex;align-items:center;gap:10px;background:var(--soft);border-radius:9px;padding:7px 9px}
+  .list .n{min-width:34px;height:28px;display:grid;place-items:center;background:var(--accent);color:#fff;border-radius:7px;font-weight:700;font-size:.85rem}
+  .list .n.m{background:#5f8fb3}
+  .list .t{flex:1;font-size:.84rem;line-height:1.35}
+  .list .t small{display:block;color:var(--ink-2);font-size:.74rem}
+  .chip-x{border:0;background:transparent;color:var(--ink-2);font-size:1.1rem;cursor:pointer;border-radius:6px;width:26px;height:26px}
+  .chip-x:hover{background:#f3dede;color:#a33b3b}
+  .empty{color:var(--ink-2);font-size:.86rem;line-height:1.6;background:var(--soft);border-radius:10px;padding:14px;margin:0}
+
+  @media (max-width:900px){
+    body{padding:10px}
+    .dc{padding:14px}
+    .dc-body{grid-template-columns:1fr}
+    .panel{position:static}
+    .seg button{padding:7px 10px}
+  }
+
+
+/* ============ صفحة العلاج ============ */
+body{padding:24px 24px 110px}
+.page{max-width:1240px;margin:auto;display:flex;flex-direction:column;gap:18px}
+.page-head{display:flex;align-items:center;gap:14px}
+.page-head .ico{width:46px;height:46px;border-radius:12px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:1.25rem}
+.page-head h1{margin:0;font-size:1.45rem}
+.page-head p{margin:2px 0 0;color:var(--ink-2);font-size:.9rem}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.card-title{display:flex;align-items:center;gap:10px;margin:0 0 16px;font-size:1.05rem;font-weight:700}
+.card-title i{color:var(--accent);font-size:.95rem}
+.card-title .aside{margin-inline-start:auto;font-size:.8rem;font-weight:500;color:var(--ink-2)}
+.page > .dc{max-width:none;width:100%;margin:0;border-radius:16px}
+
+label.lbl{display:block;font-size:.84rem;font-weight:600;margin-bottom:6px}
+label.lbl .req{color:#b23b3b}
+label.lbl .optional{color:var(--ink-2);font-weight:400}
+.field,.select,textarea.field{width:100%;font:inherit;font-size:.9rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea.field{resize:vertical;min-height:70px;line-height:1.6}
+.field:focus,.select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.hint{font-size:.76rem;color:var(--ink-2);margin-top:5px;line-height:1.5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* المريض */
+.patient-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
+.search{position:relative}
+.search i.fa-magnifying-glass{position:absolute;top:13px;inset-inline-start:12px;color:var(--ink-2);font-size:.85rem}
+.search .field{padding-inline-start:34px}
+.results{position:absolute;inset-inline:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(23,51,59,.12);z-index:20;overflow:hidden;display:none}
+.results.open{display:block}
+.results button{display:flex;width:100%;justify-content:space-between;gap:10px;font:inherit;font-size:.88rem;text-align:right;background:none;border:0;padding:10px 12px;cursor:pointer;color:var(--ink)}
+.results button:hover,.results button:focus-visible{background:var(--accent-soft);outline:none}
+.results small{color:var(--ink-2)}
+.patient-chip{display:flex;align-items:center;gap:12px;background:var(--accent-soft);border:1px solid #b9dcdd;border-radius:12px;padding:10px 12px}
+.patient-chip .av{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700}
+.patient-chip .t{flex:1;font-size:.9rem;font-weight:600}
+.patient-chip .t small{display:block;font-weight:400;color:var(--ink-2);font-size:.78rem}
+.x{border:0;background:transparent;color:var(--ink-2);width:30px;height:30px;border-radius:8px;cursor:pointer}
+.x:hover{background:#f3dede;color:#a33b3b}
+
+.dent{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative}
+.pill input{position:absolute;opacity:0}
+.pill span{display:block;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:.87rem;font-weight:600;cursor:pointer;background:var(--surface)}
+.pill span small{font-weight:400;color:var(--ink-2);margin-inline-start:4px}
+.pill input:checked+span{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.pill input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+.auto-note{font-size:.78rem;color:var(--accent);margin-top:8px;display:none}
+.auto-note.show{display:block}
+
+/* الأعمدة الثلاثة */
+.work{display:grid;grid-template-columns:270px minmax(0,1fr) 300px;gap:18px;align-items:start}
+
+/* نوع العلاج */
+.types{display:flex;flex-direction:column;gap:6px}
+.type{display:flex;align-items:center;gap:11px;width:100%;font:inherit;text-align:right;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:9px 11px;cursor:pointer;color:var(--ink)}
+.type .ti{width:34px;height:34px;flex:none;border-radius:9px;display:grid;place-items:center;background:var(--soft);color:var(--ink-2);font-size:.9rem}
+.type b{display:block;font-size:.88rem;font-weight:600}
+.type small{display:block;font-size:.74rem;color:var(--ink-2)}
+.type:hover{border-color:var(--accent)}
+.type[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.type[aria-pressed="true"] .ti{background:var(--accent);color:#fff}
+.type:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* تفاصيل العلاج */
+.col{display:flex;flex-direction:column;gap:18px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:11px;padding:11px 13px;cursor:pointer}
+.opt:hover{border-color:var(--accent)}
+.opt input{accent-color:var(--accent);width:17px;height:17px;flex:none}
+.opt .t{flex:1;font-size:.9rem;font-weight:600}
+.opt .t small{display:block;font-weight:400;font-size:.76rem;color:var(--ink-2)}
+.opt .p{font-size:.86rem;font-weight:700;white-space:nowrap;text-align:left}
+.opt .p small{display:block;font-weight:400;font-size:.72rem;color:var(--ink-2)}
+.opt:has(input:checked){border-color:var(--accent);background:#f3fafa}
+.warn{font-size:.8rem;color:#8a5a0c;background:#fdf4e3;border-radius:9px;padding:9px 11px;display:none}
+.warn.show{display:block}
+
+.cost{background:#f3fafa;border-color:#bfdfe0}
+.cost-lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:.86rem}
+.cost-lines li{display:flex;justify-content:space-between;gap:10px}
+.cost-lines li span:last-child{font-weight:600;white-space:nowrap}
+.cost-lines .muted{color:var(--ink-2)}
+.cost-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:.86rem}
+.cost-row .field{width:110px;padding:7px 10px}
+.total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #bfdfe0;margin-top:12px;padding-top:12px}
+.total span{font-weight:600}
+.total strong{font-size:1.35rem;color:var(--accent)}
+
+details.more{border:1px dashed var(--line);border-radius:11px;margin-top:14px}
+details.more summary{cursor:pointer;padding:11px 13px;font-size:.88rem;font-weight:600;list-style:none;display:flex;gap:8px;align-items:center}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary i{color:var(--accent);transition:transform .15s}
+details.more[open] summary i{transform:rotate(45deg)}
+details.more .inner{padding:0 13px 13px;display:flex;flex-direction:column;gap:12px}
+
+.seg2{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg2 .pill span{text-align:center;padding:8px 6px}
+
+/* مراحل العلاج */
+.progress{height:8px;background:var(--soft);border-radius:8px;overflow:hidden;margin:6px 0 4px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.prog-meta{display:flex;justify-content:space-between;font-size:.8rem;color:var(--ink-2);margin-bottom:14px}
+.stages{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;position:relative}
+.stage{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.stage-top{display:flex;gap:10px;align-items:flex-start}
+.stage .no{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:700;background:var(--soft);color:var(--ink-2);border:1px solid var(--line)}
+.stage h4{margin:2px 0 3px;font-size:.9rem}
+.stage p{margin:0;font-size:.78rem;color:var(--ink-2);line-height:1.55}
+.stage .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:.76rem;color:var(--ink-2)}
+.badge{font-size:.72rem;font-weight:600;border-radius:20px;padding:2px 9px;background:var(--soft);color:var(--ink-2);white-space:nowrap}
+.stage.current{border-color:#e8b95c;background:#fffbf1}
+.stage.current .no{background:#e89b1c;border-color:#e89b1c;color:#fff}
+.stage.current .badge{background:#fbe8c3;color:#8a5a0c}
+.stage.done .no{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage.done .badge{background:var(--accent-soft);color:var(--accent)}
+.stage.done h4{color:var(--ink-2)}
+.stage .work-area{margin-top:10px;display:none;flex-direction:column;gap:8px}
+.stage.current .work-area{display:flex}
+.stage .work-area textarea{min-height:60px;font-size:.84rem}
+.stage .done-note{margin-top:8px;font-size:.78rem;background:var(--soft);border-radius:8px;padding:7px 9px;display:none}
+.stage.done .done-note.has{display:block}
+.btn.sm{padding:7px 10px;font-size:.82rem}
+.btn-row{display:flex;gap:6px}
+.btn-row .btn{flex:1}
+
+/* شريط الحفظ */
+.savebar{position:fixed;inset-inline:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-top:1px solid var(--line);z-index:30}
+.savebar-in{max-width:1240px;margin:auto;padding:12px 24px;display:flex;align-items:center;gap:16px}
+.savebar .sum{flex:1;font-size:.86rem;color:var(--ink-2);display:flex;gap:18px;flex-wrap:wrap}
+.savebar .sum b{color:var(--ink)}
+.savebar .btn{padding:11px 20px}
+.savebar .err{color:#a33b3b;font-weight:600}
+
+@media (max-width:1100px){ .work{grid-template-columns:1fr 1fr} .stages-card{grid-column:1 / -1} }
+@media (max-width:760px){
+  body{padding:10px 10px 150px}
+  .work,.patient-row,.grid2{grid-template-columns:1fr}
+  .savebar-in{flex-wrap:wrap;padding:10px}
+  .savebar .btn{flex:1}
+}
+</style>
+</head>
+<body>
+<form class="page" id="treatmentForm" method="post" action="save_treatment.php" novalidate>
+
+  <header class="page-head">
+    <div class="ico"><i class="fa-solid fa-tooth"></i></div>
+    <div>
+      <h1>علاج جديد</h1>
+      <p>اختر المريض والأسنان ونوع العلاج، ثم تابع المراحل أثناء الجلسة.</p>
+    </div>
+  </header>
+
+  <!-- ============ المريض والموعد ============ -->
+  <section class="card">
+    <h2 class="card-title"><i class="fa-solid fa-user"></i>المريض والموعد</h2>
+    <div class="patient-row">
+      <div>
+        <label class="lbl" for="patientSearch">المريض <span class="req">*</span></label>
+        <div id="patientPick">
+          <div class="search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input class="field" id="patientSearch" autocomplete="off" placeholder="ابحث بالاسم أو رقم الهاتف">
+            <div class="results" id="patientResults" role="listbox"></div>
+          </div>
+        </div>
+        <div class="patient-chip" id="patientChip" hidden></div>
+        <input type="hidden" name="patient_id" id="patientId">
+      </div>
+      <div>
+        <label class="lbl" for="appointment">الموعد <span class="optional">(اختياري)</span></label>
+        <select class="select" id="appointment" name="appointment_id" disabled>
+          <option value="">اختر المريض أولاً</option>
+        </select>
+        <div class="hint">ربط العلاج بموعد يغلق الموعد تلقائياً عند الحفظ.</div>
+      </div>
+    </div>
+
+    <div class="dent">
+      <label class="lbl">نوع الإطباق</label>
+      <div class="pills" role="radiogroup">
+        <label class="pill"><input type="radio" name="dentition_type" value="perm" checked><span>أسنان دائمة<small>بالغون</small></span></label>
+        <label class="pill"><input type="radio" name="dentition_type" value="mixed"><span>مختلطة<small>6–12 سنة</small></span></label>
+        <label class="pill"><input type="radio" name="dentition_type" value="prim"><span>أسنان لبنية<small>أطفال</small></span></label>
+      </div>
+      <div class="auto-note" id="autoNote"></div>
+    </div>
+  </section>
+
+  <!-- ============ مخطط الأسنان ============ -->
+  <div class="dc" id="dentalChart">
+    <div class="dc-head">
+      <div>
+        <h2>اختيار الأسنان المراد علاجها</h2>
+        <p>الترقيم وفق نظام FDI، والمخطط من منظور الطبيب المقابل للمريض.</p>
+      </div>
+    </div>
+    <div class="dc-body">
+      <div class="chart">
+        <svg id="dcSvg" viewBox="0 0 760 700" role="group" aria-label="مخطط الأسنان"></svg>
+        <div class="legend">
+          <span><i class="sw"></i>سن دائم</span>
+          <span><i class="sw m"></i>سن لبني</span>
+          <span><i class="sw s"></i>محدد للعلاج</span>
+        </div>
+        <div class="quads" id="dcQuads" dir="ltr"></div>
+      </div>
+      <aside class="panel">
+        <h3>الأسنان المحددة <span id="dcCount">0</span></h3>
+        <div class="actions">
+          <button type="button" class="btn primary" data-act="all">تحديد الكل</button>
+          <button type="button" class="btn ghost" data-act="clear">مسح التحديد</button>
+          <button type="button" class="btn" data-act="upper">الفك العلوي</button>
+          <button type="button" class="btn" data-act="lower">الفك السفلي</button>
+        </div>
+        <ul class="list" id="dcList"></ul>
+        <input type="hidden" name="selected_teeth" id="selectedTeeth" value="">
+        <input type="hidden" id="dentitionType" value="perm">
+      </aside>
+    </div>
+  </div>
+
+  <!-- ============ نوع العلاج / التفاصيل / المراحل ============ -->
+  <div class="work">
+
+    <section class="card">
+      <h2 class="card-title"><i class="fa-solid fa-stethoscope"></i>نوع العلاج</h2>
+      <div class="types" id="types"></div>
+      <input type="hidden" name="treatment_type" id="treatmentType">
+    </section>
+
+    <div class="col">
+      <section class="card">
+        <h2 class="card-title"><i class="fa-solid fa-list-check"></i><span id="optsTitle">خيارات العلاج</span><span class="aside" id="optsAside"></span></h2>
+        <div class="opts" id="opts"></div>
+        <div class="warn" id="teethWarn" style="margin-top:10px"><i class="fa-solid fa-circle-info"></i> بعض الخيارات المختارة تُحسب لكل سن. حدد الأسنان من المخطط لحساب التكلفة.</div>
+      </section>
+
+      <section class="card cost">
+        <h2 class="card-title"><i class="fa-solid fa-receipt"></i>ملخص التكلفة</h2>
+        <ul class="cost-lines" id="costLines"></ul>
+        <div class="cost-row">
+          <label for="discount">الخصم (%)</label>
+          <input class="field" type="number" id="discount" name="discount" min="0" max="100" value="0" inputmode="numeric">
+        </div>
+        <div class="total"><span>التكلفة الإجمالية</span><strong id="total">0 ل.س</strong></div>
+        <input type="hidden" name="total_cost" id="totalCost">
+      </section>
+
+      <section class="card">
+        <h2 class="card-title"><i class="fa-solid fa-file-medical"></i>معلومات العلاج الأساسية</h2>
+        <div class="grid2">
+          <div>
+            <label class="lbl" for="tDate">تاريخ العلاج <span class="req">*</span></label>
+            <input class="field" type="date" id="tDate" name="treatment_date">
+          </div>
+          <div>
+            <label class="lbl" for="tDuration">مدة العلاج (دقيقة)</label>
+            <input class="field" type="number" id="tDuration" name="duration" min="0">
+            <div class="hint">محسوبة من مجموع مدد المراحل، ويمكنك تعديلها.</div>
+          </div>
+        </div>
+        <details class="more">
+          <summary><i class="fa-solid fa-plus"></i>الأعراض والتشخيص والأدوية</summary>
+          <div class="inner">
+            <div><label class="lbl" for="symptoms">الأعراض</label><textarea class="field" id="symptoms" name="symptoms" placeholder="مثال: ألم عند المضغ منذ أسبوع"></textarea></div>
+            <div><label class="lbl" for="diagnosis">التشخيص</label><textarea class="field" id="diagnosis" name="diagnosis"></textarea></div>
+            <div><label class="lbl" for="details">تفاصيل العلاج</label><textarea class="field" id="details" name="details"></textarea></div>
+            <div><label class="lbl" for="meds">الأدوية الموصوفة</label><textarea class="field" id="meds" name="medications" placeholder="اسم الدواء، الجرعة، المدة"></textarea></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title"><i class="fa-solid fa-calendar-check"></i>المتابعة</h2>
+        <label class="lbl">متابعة تلقائية بعد</label>
+        <div class="seg2" role="radiogroup">
+          <label class="pill"><input type="radio" name="followup_after" value="0" checked><span>بدون</span></label>
+          <label class="pill"><input type="radio" name="followup_after" value="3"><span>3 أشهر</span></label>
+          <label class="pill"><input type="radio" name="followup_after" value="6"><span>6 أشهر</span></label>
+          <label class="pill"><input type="radio" name="followup_after" value="9"><span>9 أشهر</span></label>
+        </div>
+        <div class="grid2" style="margin-top:14px">
+          <div>
+            <label class="lbl" for="fDate">موعد المتابعة</label>
+            <input class="field" type="date" id="fDate" name="followup_date">
+            <div class="hint" id="fHint">اختر مدة أعلاه أو حدد تاريخاً بنفسك.</div>
+          </div>
+          <div>
+            <label class="lbl" for="fPriority">أولوية المتابعة</label>
+            <select class="select" id="fPriority" name="followup_priority">
+              <option value="normal">عادية</option>
+              <option value="medium">متوسطة</option>
+              <option value="urgent">عاجلة</option>
+            </select>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card stages-card">
+      <h2 class="card-title"><i class="fa-solid fa-route"></i>مراحل العلاج</h2>
+      <div class="progress" aria-hidden="true"><i id="progBar"></i></div>
+      <div class="prog-meta"><span id="progText">0 من 0 مراحل</span><span id="progTime"></span></div>
+      <ol class="stages" id="stages"></ol>
+      <input type="hidden" name="stages_json" id="stagesJson">
+    </section>
+  </div>
+
+  <!-- ============ شريط الحفظ ============ -->
+  <div class="savebar">
+    <div class="savebar-in">
+      <div class="sum" id="saveSum"></div>
+      <button type="button" class="btn" id="cancelBtn">إلغاء</button>
+      <button type="submit" class="btn primary" name="action" value="save"><i class="fa-solid fa-floppy-disk"></i> حفظ العلاج</button>
+    </div>
+  </div>
+</form>
+
+<script>
+
+(function(){
+  const root = document.getElementById('dentalChart');
+  const svg  = document.getElementById('dcSvg');
+
+  /* عرض التاج بالمليمتر (تقريبي) لكل موضع */
+  const WIDTH = {
+    perm:{u:{1:8.5,2:6.5,3:7.5,4:7,5:6.5,6:10,7:9,8:8.5}, l:{1:5.3,2:5.9,3:6.9,4:7,5:7.1,6:11,7:10.5,8:10}},
+    prim:{u:{1:6.5,2:5.1,3:7,4:7.3,5:8.2},             l:{1:4.2,2:4.7,3:5,4:7.7,5:9.9}}
+  };
+  const TYPE = {perm:{1:'inc',2:'inc',3:'can',4:'pre',5:'pre',6:'mol',7:'mol',8:'mol'},
+                prim:{1:'inc',2:'inc',3:'can',4:'mol',5:'mol'}};
+  const NAME = {
+    perm:{1:'القاطعة المركزية',2:'القاطعة الجانبية',3:'الناب',4:'الضاحك الأول',5:'الضاحك الثاني',6:'الرحى الأولى',7:'الرحى الثانية',8:'الرحى الثالثة (العقل)'},
+    prim:{1:'القاطعة المركزية اللبنية',2:'القاطعة الجانبية اللبنية',3:'الناب اللبني',4:'الرحى اللبنية الأولى',5:'الرحى اللبنية الثانية'}
+  };
+  const QNAME = {1:'علوي أيمن',2:'علوي أيسر',3:'سفلي أيسر',4:'سفلي أيمن'};
+
+  /* تسلسل الأسنان في كل ربع حسب نوع الإطباق */
+  const SEQ = {
+    perm:[1,2,3,4,5,6,7,8].map(p=>({k:'perm',p})),
+    prim:[1,2,3,4,5].map(p=>({k:'prim',p})),
+    mixed:[{k:'perm',p:1},{k:'perm',p:2},{k:'prim',p:3},{k:'prim',p:4},{k:'prim',p:5},{k:'perm',p:6}]
+  };
+  const ARCH = { perm:{u:[285,215],l:[272,205]}, mixed:{u:[258,188],l:[246,180]}, prim:{u:[205,145],l:[196,138]} };
+
+  let set = 'perm';
+  const selected = new Set();
+  let teeth = [];   // {n, k, p, q}
+
+  const fdi = (q,k,p) => (k==='prim' ? q+4 : q)*10 + p;
+  const baseQ = n => { const q = Math.floor(n/10); return q>4 ? q-4 : q; };
+  const info = n => { const q=Math.floor(n/10), k=q>4?'prim':'perm', p=n%10;
+                      return {name:NAME[k][p], loc:QNAME[baseQ(n)], k}; };
+
+  /* ---------- أشكال التيجان (منظر إطباقي) — المحور y السالب = الجهة الدهليزية ---------- */
+  const f = v => v.toFixed(1);
+  function rrect(hw,hd,r){
+    return `M${f(-hw+r)} ${f(-hd)}H${f(hw-r)}Q${f(hw)} ${f(-hd)} ${f(hw)} ${f(-hd+r)}V${f(hd-r)}Q${f(hw)} ${f(hd)} ${f(hw-r)} ${f(hd)}H${f(-hw+r)}Q${f(-hw)} ${f(hd)} ${f(-hw)} ${f(hd-r)}V${f(-hd+r)}Q${f(-hw)} ${f(-hd)} ${f(-hw+r)} ${f(-hd)}Z`;
+  }
+  function shape(type, w, d){
+    const hw=w/2, hd=d/2;
+    if(type==='inc') return {
+      crown:`M${f(-hw)} ${f(-hd*.3)}C${f(-hw)} ${f(-hd*1.08)} ${f(hw)} ${f(-hd*1.08)} ${f(hw)} ${f(-hd*.3)}C${f(hw)} ${f(hd*.35)} ${f(hw*.42)} ${f(hd)} 0 ${f(hd)}C${f(-hw*.42)} ${f(hd)} ${f(-hw)} ${f(hd*.35)} ${f(-hw)} ${f(-hd*.3)}Z`,
+      groove:`M${f(-hw*.68)} ${f(-hd*.42)}Q0 ${f(-hd*.62)} ${f(hw*.68)} ${f(-hd*.42)}M0 ${f(hd*.25)}v${f(hd*.35)}`};
+    if(type==='can') return {
+      crown:`M0 ${f(-hd)}C${f(hw*.8)} ${f(-hd)} ${f(hw)} ${f(-hd*.25)} ${f(hw*.88)} ${f(hd*.25)}C${f(hw*.62)} ${f(hd*.95)} ${f(-hw*.62)} ${f(hd*.95)} ${f(-hw*.88)} ${f(hd*.25)}C${f(-hw)} ${f(-hd*.25)} ${f(-hw*.8)} ${f(-hd)} 0 ${f(-hd)}Z`,
+      groove:`M${f(-hw*.55)} ${f(-hd*.05)}L0 ${f(-hd*.55)}L${f(hw*.55)} ${f(-hd*.05)}M0 ${f(-hd*.55)}V${f(hd*.45)}`};
+    if(type==='pre') return {
+      crown:rrect(hw,hd,Math.min(hw,hd)*.85),
+      groove:`M${f(-hw*.55)} ${f(hd*.02)}Q0 ${f(hd*.16)} ${f(hw*.55)} ${f(hd*.02)}`};
+    return { /* mol */
+      crown:rrect(hw,hd,Math.min(hw,hd)*.5),
+      groove:`M${f(-hw*.66)} ${f(hd*.08)}C${f(-hw*.2)} ${f(-hd*.12)} ${f(hw*.2)} ${f(hd*.18)} ${f(hw*.66)} ${f(-hd*.06)}M${f(-hw*.06)} ${f(-hd*.68)}C${f(hw*.12)} ${f(-hd*.2)} ${f(-hw*.12)} ${f(hd*.22)} ${f(hw*.06)} ${f(hd*.68)}`};
+  }
+  const DEPTH = {inc:{u:.92,l:1.15}, can:{u:1.1,l:1.1}, pre:{u:1.28,l:1.12}, mol:{u:1.08,l:1.0}};
+
+  /* ---------- القوس السني: نصف قطع ناقص نوزّع عليه الأسنان حسب عرضها ---------- */
+  function arcTable(a,b){
+    const N=360, th=[0], s=[0];
+    let px=0, py=0;
+    for(let i=1;i<=N;i++){
+      const t=(Math.PI/2)*i/N, x=a*Math.sin(t), y=b*(1-Math.cos(t));
+      s.push(s[i-1]+Math.hypot(x-px,y-py)); th.push(t); px=x; py=y;
+    }
+    return {th,s,L:s[N]};
+  }
+  function thetaAt(tab,len){
+    let i=1; while(i<tab.s.length-1 && tab.s[i]<len) i++;
+    const r=(len-tab.s[i-1])/(tab.s[i]-tab.s[i-1]||1);
+    return tab.th[i-1]+r*(tab.th[i]-tab.th[i-1]);
+  }
+
+  function render(){
+    const seq = SEQ[set], cx=380, mid=350, gap=38;
+    let html='', idx=0;
+    teeth=[];
+
+    ['u','l'].forEach(jaw=>{
+      const [a,b]=ARCH[set][jaw];
+      const tab=arcTable(a,b);
+      const up = jaw==='u';
+      const apexY = up ? mid-gap-b : mid+gap+b;
+      const widths = seq.map(t=>WIDTH[t.k][jaw][t.p]);
+      const g=1.6, sum=widths.reduce((x,y)=>x+y,0);
+      const scale=(tab.L*.985-g*(seq.length-.5))/sum;
+
+      // اللثة
+      let gumPts=[];
+      for(let i=0;i<=40;i++){ const t=(Math.PI/2)*i/40;
+        gumPts.push([a*Math.sin(t), b*(1-Math.cos(t))]); }
+      const pts=[...gumPts.slice().reverse().map(([x,y])=>[cx-x,y]), ...gumPts.slice(1).map(([x,y])=>[cx+x,y])]
+        .map(([x,y])=>`${f(x)},${f(up?apexY+y:apexY-y)}`).join(' ');
+      html+=`<polyline class="gum" points="${pts}" stroke-width="${f(Math.min(scale,7)*9)}"/>`;
+
+      [-1,1].forEach(sx=>{
+        // sx=-1 : يسار الشاشة = يمين المريض (الربع 1 علوياً، 4 سفلياً)
+        const q = up ? (sx<0?1:2) : (sx<0?4:3);
+        let run=g/2;
+        seq.forEach((t,i)=>{
+          const w=widths[i]*scale, type=TYPE[t.k][t.p];
+          const d=w*DEPTH[type][jaw];
+          const th=thetaAt(tab, run+w/2);
+          run+=w+g;
+          const x=cx+sx*a*Math.sin(th);
+          const y=up ? apexY+b*(1-Math.cos(th)) : apexY-b*(1-Math.cos(th));
+          const phi=Math.atan2(b*Math.sin(th), a*Math.cos(th))*180/Math.PI;
+          const sy=up?1:-1;
+          const rad=phi*Math.PI/180;
+          const nx=sx*Math.sin(rad), ny=-sy*Math.cos(rad);
+          const off=d/2+13;
+          const n=fdi(q,t.k,t.p), sh=shape(type,w,d), inf=info(n);
+          teeth.push({n,q});
+          html+=`<g class="tooth ${t.k==='prim'?'prim':''} ${selected.has(n)?'on':''}" data-n="${n}" tabindex="0" role="checkbox"
+                   aria-checked="${selected.has(n)}" aria-label="${n} ${inf.name} ${inf.loc}" style="--i:${idx++}">
+                   <title>${n} — ${inf.name} (${inf.loc})</title>
+                   <g transform="translate(${f(x)} ${f(y)}) scale(${sx} ${sy}) rotate(${f(phi)})">
+                     <path class="crown" d="${sh.crown}"/><path class="groove" d="${sh.groove}"/>
+                   </g>
+                   <text class="num" x="${f(x+nx*off)}" y="${f(y+ny*off)}">${n}</text>
+                 </g>`;
+        });
+      });
+    });
+
+    // خط المنتصف والتسميات
+    html = `<line class="mid" x1="380" y1="20" x2="380" y2="680"/>
+            <text class="side" x="18" y="${mid+4}">يمين المريض</text>
+            <text class="side" x="742" y="${mid+4}" text-anchor="end">يسار المريض</text>
+            <text class="jaw" x="380" y="${mid-8}">الفك العلوي</text>
+            <text class="jaw" x="380" y="${mid+20}">الفك السفلي</text>` + html;
+    svg.innerHTML = html;
+
+    // إبقاء المحدد الموجود فقط في الإطباق الحالي
+    const valid=new Set(teeth.map(t=>t.n));
+    [...selected].forEach(n=>{ if(!valid.has(n)) selected.delete(n); });
+    renderQuads(); sync();
+  }
+
+  function renderQuads(){
+    const order=[1,2,4,3]; // يطابق ترتيب المخطط بصرياً
+    const box=document.getElementById('dcQuads');
+    box.innerHTML = order.map(q=>{
+      const ns=teeth.filter(t=>t.q===q).map(t=>t.n);
+      const sorted=[...ns].sort((x,y)=>x-y), runs=[];
+      sorted.forEach(n=>{ const r=runs[runs.length-1]; (r && n===r[1]+1) ? r[1]=n : runs.push([n,n]); });
+      const range = runs.map(([x,y])=>x===y?`${x}`:`${x}-${y}`).join(', ');
+      return `<button type="button" class="quad" data-q="${q}" dir="rtl">
+                <span><b>الربع ${q} <bdi dir="ltr">(${range})</bdi></b><small>${QNAME[q]}</small></span>
+                <span class="cnt" data-cnt="${q}">0/${ns.length}</span></button>`;
+    }).join('');
+  }
+
+  function sync(){
+    svg.querySelectorAll('.tooth').forEach(g=>{
+      const on=selected.has(+g.dataset.n);
+      g.classList.toggle('on',on); g.setAttribute('aria-checked',on);
+    });
+    [1,2,3,4].forEach(q=>{
+      const ns=teeth.filter(t=>t.q===q).map(t=>t.n);
+      const c=ns.filter(n=>selected.has(n)).length;
+      const el=document.querySelector(`[data-cnt="${q}"]`);
+      if(el){ el.textContent=`${c}/${ns.length}`; el.parentElement.classList.toggle('full',c===ns.length); }
+    });
+    const list=[...selected].sort((a,b)=>a-b);
+    document.getElementById('dcCount').textContent=list.length;
+    document.getElementById('selectedTeeth').value=list.join(',');
+    document.getElementById('dentitionType').value=set;
+    const ul=document.getElementById('dcList');
+    ul.innerHTML = list.length ? list.map(n=>{ const i=info(n);
+      return `<li><span class="n ${i.k==='prim'?'m':''}">${n}</span>
+              <span class="t">${i.name}<small>${i.loc}${i.k==='prim'?'، لبني':''}</small></span>
+              <button type="button" class="chip-x" data-rm="${n}" aria-label="إزالة السن ${n}">×</button></li>`;}).join('')
+      : `<p class="empty">اضغط على أي سن في المخطط لإضافته، أو اختر ربعاً كاملاً من الأزرار أسفل المخطط.</p>`;
+    root.dispatchEvent(new CustomEvent('teeth-change',{detail:{dentition:set,teeth:list}}));
+  }
+
+  function toggleGroup(ns){
+    const all=ns.every(n=>selected.has(n));
+    ns.forEach(n=> all?selected.delete(n):selected.add(n));
+    sync();
+  }
+
+  svg.addEventListener('click',e=>{
+    const g=e.target.closest('.tooth'); if(!g) return;
+    const n=+g.dataset.n; selected.has(n)?selected.delete(n):selected.add(n); sync();
+  });
+  svg.addEventListener('keydown',e=>{
+    if((e.key==='Enter'||e.key===' ') && e.target.classList.contains('tooth')){ e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click',{bubbles:true})); }
+  });
+  document.getElementById('dcQuads').addEventListener('click',e=>{
+    const b=e.target.closest('.quad'); if(!b) return;
+    toggleGroup(teeth.filter(t=>t.q===+b.dataset.q).map(t=>t.n));
+  });
+  root.querySelector('.actions').addEventListener('click',e=>{
+    const a=e.target.dataset.act; if(!a) return;
+    if(a==='clear'){ selected.clear(); sync(); return; }
+    const pick = a==='all'? teeth : teeth.filter(t=> a==='upper' ? t.q<=2 : t.q>=3);
+    pick.forEach(t=>selected.add(t.n)); sync();
+  });
+  document.getElementById('dcList').addEventListener('click',e=>{
+    const n=e.target.dataset.rm; if(n){ selected.delete(+n); sync(); }
+  });
+  root.querySelectorAll('.seg button').forEach(btn=>btn.addEventListener('click',()=>{
+    set=btn.dataset.set;
+    root.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b===btn));
+    render();
+  }));
+
+  /* واجهة بسيطة للدمج مع باقي النظام */
+  window.DentalChart = {
+    get: ()=>[...selected].sort((a,b)=>a-b),
+    set: arr=>{ selected.clear(); arr.forEach(n=>selected.add(+n)); render(); },
+    dentition: t=>{ set=t; render(); }
+  };
+
+  render();
+})();
+
+</script>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const money = n => Math.round(n).toLocaleString('en-US') + ' ل.س';
+
+  /* ---------- بيانات تجريبية: استبدلها ببيانات قاعدة البيانات عبر PHP ---------- */
+  const PATIENTS = [
+    {id:12, name:'سارة خالد محمد', phone:'0956709012', age:34},
+    {id:18, name:'يزن أحمد العلي', phone:'0944120558', age:8},
+    {id:21, name:'ليان محمود حسن', phone:'0933781204', age:4},
+    {id:27, name:'عمر فادي الخطيب', phone:'0991432270', age:52}
+  ];
+  const APPOINTMENTS = {
+    12:[{id:301,label:'الخميس 1 تشرين الأول، 10:30 ص — تنظيف'}],
+    18:[{id:305,label:'الخميس 1 تشرين الأول، 12:00 م — فحص'}],
+    27:[{id:311,label:'السبت 3 تشرين الأول، 9:00 ص — تاج'}]
+  };
+
+  /* unit: tooth = لكل سن، visit = للجلسة */
+  const TYPES = [
+    {id:'checkup', name:'فحص عام', sub:'فحص شامل للفم والأسنان', icon:'fa-magnifying-glass', opts:[
+      ['فحص سريري شامل','',150000,'visit'],['صورة شعاعية ذروية','',200000,'tooth'],['صورة بانورامية','',600000,'visit']]},
+    {id:'cleaning', name:'تنظيف أسنان', sub:'إزالة الجير والتلميع', icon:'fa-shield-halved', opts:[
+      ['إزالة الجير','إزالة الجير فوق اللثة',250000,'visit'],['تلميع الأسنان','إزالة التصبغات السطحية',300000,'visit'],
+      ['علاج بالفلورايد','تقوية المينا',300000,'visit'],['تنظيف عميق','تنظيف تحت اللثة (Root planing)',500000,'tooth']]},
+    {id:'filling', name:'حشوة أسنان', sub:'علاج التسوس والكسور', icon:'fa-fill-drip', opts:[
+      ['حشوة تجميلية (كومبوزيت)','بلون السن',350000,'tooth'],['حشوة زجاجية شاردية','',250000,'tooth'],
+      ['حشوة أملغم','',250000,'tooth'],['حشوة مؤقتة','',100000,'tooth']]},
+    {id:'root', name:'علاج جذور', sub:'علاج عصب الأسنان', icon:'fa-syringe', opts:[
+      ['سن أمامي (قناة واحدة)','',800000,'tooth'],['ضاحك','',1000000,'tooth'],['رحى','',1300000,'tooth'],['إعادة معالجة لبية','',1500000,'tooth']]},
+    {id:'crown', name:'تاج أسنان', sub:'تركيب تاج للسن', icon:'fa-crown', opts:[
+      ['خزف على معدن','',1200000,'tooth'],['زيركون','',2000000,'tooth'],['إيماكس','',2200000,'tooth'],['تاج مؤقت','',250000,'tooth']]},
+    {id:'extraction', name:'خلع أسنان', sub:'إزالة السن التالف', icon:'fa-hand-holding-medical', opts:[
+      ['خلع بسيط','',150000,'tooth'],['خلع جراحي','',450000,'tooth'],['ضرس عقل منطمر','',700000,'tooth']]},
+    {id:'implant', name:'زراعة أسنان', sub:'زرعة بديلة للسن المفقود', icon:'fa-screwdriver', opts:[
+      ['زرعة سنية','',6000000,'tooth'],['طعم عظمي','',2500000,'tooth'],['رفع جيب فكي','',3000000,'visit'],['دعامة وتاج على زرعة','',2500000,'tooth']]},
+    {id:'ortho', name:'تقويم أسنان', sub:'تصحيح ترتيب الأسنان', icon:'fa-teeth', opts:[
+      ['تقويم معدني ثابت','',8000000,'visit'],['تقويم خزفي','',11000000,'visit'],['تقويم شفاف','',15000000,'visit'],['جهاز مثبت','',1000000,'visit']]},
+    {id:'whitening', name:'تبييض أسنان', sub:'تفتيح لون الأسنان', icon:'fa-star', opts:[
+      ['تبييض في العيادة','',2000000,'visit'],['تبييض منزلي بالقوالب','',1200000,'visit']]},
+    {id:'emergency', name:'علاج طوارئ', sub:'تسكين الألم والإسعاف', icon:'fa-truck-medical', opts:[
+      ['تسكين ألم وفتح حجرة لبية','',150000,'tooth'],['تصريف خراج','',250000,'tooth'],['إعادة تثبيت سن مخلوع','',400000,'tooth']]}
+  ];
+
+  const BASE_STAGES = [
+    ['الفحص الأولي والتشخيص','فحص المنطقة وتقييم الحالة الشعاعية وتأكيد خطة العلاج.',15],
+    ['التحضير والتخدير','تحضير المريض والأدوات والتخدير الموضعي عند الحاجة.',10],
+    ['تنفيذ العلاج الأساسي','',45],
+    ['التشطيب والمراجعة','إنهاء العمل والتأكد من الإطباق وجودة النتيجة.',20],
+    ['التعليمات والمتابعة','إعطاء المريض التعليمات وتحديد موعد المتابعة.',10]
+  ];
+  const MAIN_STEP = {
+    checkup:['الفحص والتصوير الشعاعي',20], cleaning:['إزالة الجير والتلميع',40], filling:['إزالة التسوس ووضع الحشوة',40],
+    root:['تحضير الأقنية وحشوها',60], crown:['تحضير السن وأخذ الطبعة',50], extraction:['إجراء الخلع وضبط النزف',30],
+    implant:['وضع الزرعة وخياطة اللثة',60], ortho:['تركيب الأجهزة وضبطها',60], whitening:['تطبيق مادة التبييض',50], emergency:['الإجراء الإسعافي',25]
+  };
+
+  let type = null, stages = [], current = 0, dentAuto = false;
+
+  /* ---------- المريض ---------- */
+  const search=$('#patientSearch'), results=$('#patientResults');
+  function showResults(){
+    const q=search.value.trim();
+    const list = PATIENTS.filter(p=>!q || p.name.includes(q) || p.phone.includes(q));
+    results.innerHTML = list.length ? list.map(p=>`<button type="button" role="option" data-id="${p.id}"><span>${p.name}</span><small>${p.phone}، ${p.age} سنة</small></button>`).join('')
+      : `<button type="button" disabled><small>لا يوجد مريض بهذا الاسم أو الرقم</small></button>`;
+    results.classList.add('open');
+  }
+  search.addEventListener('focus',showResults);
+  search.addEventListener('input',showResults);
+  document.addEventListener('click',e=>{ if(!e.target.closest('.search')) results.classList.remove('open'); });
+  results.addEventListener('click',e=>{ const b=e.target.closest('[data-id]'); if(b) pickPatient(+b.dataset.id); });
+
+  function pickPatient(id){
+    const p=PATIENTS.find(x=>x.id===id);
+    $('#patientId').value=id;
+    $('#patientPick').hidden=true;
+    const chip=$('#patientChip'); chip.hidden=false;
+    chip.innerHTML=`<div class="av">${p.name[0]}</div><div class="t">${p.name}<small>${p.phone}، العمر ${p.age} سنة</small></div>
+                    <button type="button" class="x" aria-label="تغيير المريض"><i class="fa-solid fa-xmark"></i></button>`;
+    chip.querySelector('.x').onclick=()=>{ chip.hidden=true; $('#patientPick').hidden=false; $('#patientId').value=''; search.value=''; fillAppointments(null); search.focus(); summary(); };
+    fillAppointments(id);
+    // اقتراح نوع الإطباق حسب العمر
+    const d = p.age<6 ? 'prim' : p.age<=12 ? 'mixed' : 'perm';
+    setDentition(d);
+    const names={perm:'أسنان دائمة',mixed:'مختلطة',prim:'أسنان لبنية'};
+    const note=$('#autoNote'); note.textContent=`اختير «${names[d]}» تلقائياً حسب عمر المريض، ويمكنك تغييره.`; note.classList.add('show');
+    summary();
+  }
+  function fillAppointments(id){
+    const sel=$('#appointment'), list=id?(APPOINTMENTS[id]||[]):null;
+    sel.disabled=!id;
+    sel.innerHTML = !id ? '<option value="">اختر المريض أولاً</option>'
+      : `<option value="">${list.length?'بدون ربط بموعد':'لا توجد مواعيد قادمة لهذا المريض'}</option>` + list.map(a=>`<option value="${a.id}">${a.label}</option>`).join('');
+  }
+
+  /* ---------- نوع الإطباق ---------- */
+  function setDentition(d){
+    document.querySelector(`input[name="dentition_type"][value="${d}"]`).checked=true;
+    window.DentalChart.dentition(d);
+  }
+  document.querySelectorAll('input[name="dentition_type"]').forEach(r=>r.addEventListener('change',()=>{
+    window.DentalChart.dentition(r.value); $('#autoNote').classList.remove('show');
+  }));
+
+  /* ---------- نوع العلاج ---------- */
+  $('#types').innerHTML = TYPES.map(t=>`<button type="button" class="type" data-t="${t.id}" aria-pressed="false">
+      <span class="ti"><i class="fa-solid ${t.icon}"></i></span><span><b>${t.name}</b><small>${t.sub}</small></span></button>`).join('');
+  $('#types').addEventListener('click',e=>{ const b=e.target.closest('.type'); if(b) pickType(b.dataset.t); });
+
+  function pickType(id){
+    type=TYPES.find(t=>t.id===id);
+    $('#treatmentType').value=id;
+    document.querySelectorAll('.type').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===id));
+    $('#optsTitle').textContent=`خيارات ${type.name}`;
+    $('#optsAside').textContent='يمكن اختيار أكثر من خيار';
+    $('#opts').innerHTML = type.opts.map(([n,d,p,u],i)=>`<label class="opt">
+        <input type="checkbox" name="options[]" value="${i}" ${i===0?'checked':''}>
+        <span class="t">${n}${d?`<small>${d}</small>`:''}</span>
+        <span class="p">${money(p)}<small>${u==='tooth'?'لكل سن':'للجلسة'}</small></span></label>`).join('');
+    buildStages(); calc();
+  }
+  $('#opts').addEventListener('change',calc);
+  $('#discount').addEventListener('input',calc);
+
+  /* ---------- التكلفة ---------- */
+  function teethCount(){ return window.DentalChart.get().length; }
+  function calc(){
+    const lines=$('#costLines'), n=teethCount();
+    if(!type){ lines.innerHTML='<li class="muted">اختر نوع العلاج لعرض التكلفة.</li>'; setTotal(0); return; }
+    const chosen=[...document.querySelectorAll('#opts input:checked')].map(i=>type.opts[+i.value]);
+    let sub=0, needTeeth=false;
+    const rows=chosen.map(([name,,price,unit])=>{
+      const q = unit==='tooth' ? n : 1; if(unit==='tooth' && !n) needTeeth=true;
+      sub+=price*q;
+      return `<li><span>${name}${unit==='tooth'?` <span class="muted">× ${n}</span>`:''}</span><span>${money(price*q)}</span></li>`;
+    });
+    $('#teethWarn').classList.toggle('show',needTeeth);
+    lines.innerHTML = `<li class="muted"><span>عدد الأسنان المحددة</span><span>${n}</span></li>` +
+      (rows.join('') || '<li class="muted">لم يُختر أي خيار بعد.</li>');
+    const disc=Math.min(100,Math.max(0,+$('#discount').value||0));
+    if(disc) lines.innerHTML+=`<li class="muted"><span>الخصم ${disc}%</span><span>− ${money(sub*disc/100)}</span></li>`;
+    setTotal(sub*(1-disc/100));
+  }
+  function setTotal(v){ $('#total').textContent=money(v); $('#totalCost').value=Math.round(v); summary(); }
+
+  /* ---------- المراحل ---------- */
+  function buildStages(){
+    const [mainTitle,mainMin]=MAIN_STEP[type.id];
+    stages = BASE_STAGES.map(([t,d,m],i)=> i===2 ? {title:mainTitle,desc:`تنفيذ ${type.name} على الأسنان المحددة.`,min:mainMin,done:false,note:''}
+                                               : {title:t,desc:d,min:m,done:false,note:''});
+    current=0; $('#tDuration').value=stages.reduce((a,s)=>a+s.min,0); renderStages();
+  }
+  function renderStages(){
+    const ol=$('#stages');
+    if(!stages.length){ ol.innerHTML='<li class="hint">تظهر مراحل العلاج بعد اختيار نوعه.</li>'; }
+    else ol.innerHTML = stages.map((s,i)=>{
+      const st = s.done?'done' : i===current?'current':'';
+      const badge = s.done?'مكتملة' : i===current?'جارية':'بالانتظار';
+      return `<li class="stage ${st}">
+        <div class="stage-top"><span class="no">${s.done?'<i class="fa-solid fa-check"></i>':i+1}</span>
+          <div style="flex:1"><h4>${s.title}</h4><p>${s.desc}</p></div></div>
+        <div class="meta"><span><i class="fa-regular fa-clock"></i> ${s.min} دقيقة</span><span class="badge">${badge}</span></div>
+        <div class="done-note ${s.note?'has':''}">${s.note.replace(/</g,'&lt;')}</div>
+        <div class="work-area">
+          <textarea class="field" data-note="${i}" placeholder="ملاحظات هذه المرحلة (اختياري)">${s.note}</textarea>
+          <div class="btn-row">
+            ${i>0?`<button type="button" class="btn sm" data-back="${i}">رجوع</button>`:''}
+            <button type="button" class="btn primary sm" data-done="${i}"><i class="fa-solid fa-check"></i> إكمال المرحلة</button>
+          </div>
+        </div></li>`;
+    }).join('');
+    const done=stages.filter(s=>s.done).length, total=stages.length;
+    $('#progBar').style.width = total? (done/total*100)+'%' : 0;
+    $('#progText').textContent = total ? (done===total?'اكتملت جميع المراحل':`${done} من ${total} مراحل`) : '';
+    $('#progTime').textContent = total ? `المتبقي ≈ ${stages.filter(s=>!s.done).reduce((a,s)=>a+s.min,0)} دقيقة` : '';
+    $('#stagesJson').value=JSON.stringify(stages);
+    summary();
+  }
+  $('#stages').addEventListener('input',e=>{ const i=e.target.dataset.note; if(i!==undefined){ stages[i].note=e.target.value; $('#stagesJson').value=JSON.stringify(stages);} });
+  $('#stages').addEventListener('click',e=>{
+    const d=e.target.closest('[data-done]'), b=e.target.closest('[data-back]');
+    if(d){ stages[+d.dataset.done].done=true; current=+d.dataset.done+1; renderStages(); }
+    if(b){ const i=+b.dataset.back; stages[i-1].done=false; current=i-1; renderStages(); }
+  });
+
+  /* ---------- التاريخ والمتابعة ---------- */
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('#tDate').value = iso(new Date());
+  document.querySelectorAll('input[name="followup_after"]').forEach(r=>r.addEventListener('change',()=>{
+    const m=+r.value, f=$('#fDate');
+    if(!m){ f.value=''; $('#fHint').textContent='بدون متابعة تلقائية.'; return; }
+    const d=$('#tDate').value?new Date($('#tDate').value+'T00:00'):new Date(); d.setMonth(d.getMonth()+m);
+    f.value=iso(d); $('#fHint').textContent=`بعد ${m} أشهر من تاريخ العلاج، ويمكنك تعديله.`;
+  }));
+
+  /* ---------- الملخص والحفظ ---------- */
+  function summary(){
+    const p=PATIENTS.find(x=>x.id==$('#patientId').value);
+    $('#saveSum').innerHTML = `<span>المريض: <b>${p?p.name:'—'}</b></span>
+      <span>العلاج: <b>${type?type.name:'—'}</b></span>
+      <span>الأسنان: <b>${teethCount()}</b></span>
+      <span>الإجمالي: <b>${$('#total').textContent}</b></span>`;
+  }
+  document.getElementById('dentalChart').addEventListener('teeth-change',calc);
+
+  $('#treatmentForm').addEventListener('submit',e=>{
+    const missing=[];
+    if(!$('#patientId').value) missing.push('المريض');
+    if(!type) missing.push('نوع العلاج');
+    if(type && type.opts.some((o,i)=>o[3]==='tooth' && document.querySelector(`#opts input[value="${i}"]:checked`)) && !teethCount()) missing.push('الأسنان');
+    if(missing.length){
+      e.preventDefault();
+      $('#saveSum').innerHTML=`<span class="err"><i class="fa-solid fa-circle-exclamation"></i> أكمل قبل الحفظ: ${missing.join('، ')}</span>`;
+    }
+  });
+  $('#cancelBtn').addEventListener('click',()=>history.back());
+
+  renderStages(); calc();
+})();
+</script>
+</body>
+</html>

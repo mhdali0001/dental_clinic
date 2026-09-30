@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مخطط الأسنان</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#17333b; --ink-2:#5b7078; --line:#dde6e8;
+    --bg:#eef3f4; --surface:#ffffff; --soft:#f6f9f9;
+    --enamel:#fcfaf4; --enamel-edge:#b8c2c3;
+    --milk:#edf4fb; --milk-edge:#86a8c4;
+    --gum:#f7e9e7;
+    --accent:#0e7580; --accent-soft:#dcefef; --focus:#e89b1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;color:var(--ink);padding:24px}
+
+  .dc{max-width:1180px;margin:auto;background:var(--surface);border-radius:18px;border:1px solid var(--line);padding:24px}
+  .dc-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .dc-head h2{margin:0;font-size:1.3rem;font-weight:700}
+  .dc-head p{margin:4px 0 0;color:var(--ink-2);font-size:.9rem}
+
+  .seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+  .seg button{font:inherit;font-size:.92rem;font-weight:600;border:0;background:transparent;color:var(--ink-2);padding:8px 16px;border-radius:9px;cursor:pointer}
+  .seg button small{display:block;font-weight:400;font-size:.72rem;opacity:.8}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(23,51,59,.12)}
+  .seg button:focus-visible,.btn:focus-visible,.quad:focus-visible,.chip-x:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .dc-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px}
+  .chart{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:12px 12px 16px}
+  .chart svg{direction:ltr;display:block;width:100%;height:auto;max-height:640px}
+
+  /* teeth */
+  .tooth{cursor:pointer;outline:none}
+  .tooth .crown{fill:var(--enamel);stroke:var(--enamel-edge);stroke-width:1.3;transition:fill .15s,stroke .15s}
+  .tooth .groove{fill:none;stroke:#c9cfcc;stroke-width:1.1;stroke-linecap:round}
+  .tooth.prim .crown{fill:var(--milk);stroke:var(--milk-edge);stroke-dasharray:3 2}
+  .tooth.prim .groove{stroke:#b7cbdb}
+  .tooth:hover .crown{fill:var(--accent-soft);stroke:var(--accent)}
+  .tooth.on .crown{fill:var(--accent);stroke:#09565e;stroke-dasharray:none}
+  .tooth.on .groove{stroke:rgba(255,255,255,.55)}
+  .tooth:focus-visible .crown{stroke:var(--focus);stroke-width:2.6}
+  .num{font-size:12px;font-weight:600;fill:var(--ink-2);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+  .tooth.on .num{fill:var(--accent);font-weight:700}
+  .gum{fill:none;stroke:var(--gum);stroke-linecap:round;stroke-linejoin:round}
+  .mid{stroke:#b9c8cb;stroke-dasharray:4 5}
+  .side{font-size:12px;fill:var(--ink-2)}
+  .jaw{font-size:13px;font-weight:600;fill:#8aa0a6;text-anchor:middle}
+
+  .tooth{animation:rise .35s ease-out both;animation-delay:calc(var(--i) * 14ms)}
+  @keyframes rise{from{opacity:0}to{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.tooth{animation:none}.tooth .crown{transition:none}}
+
+  .legend{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2);margin:4px 0 12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:14px;height:14px;border-radius:4px;border:1.3px solid var(--enamel-edge);background:var(--enamel)}
+  .sw.m{background:var(--milk);border:1.3px dashed var(--milk-edge)}
+  .sw.s{background:var(--accent);border-color:#09565e}
+
+  .quads{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .quad{font:inherit;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--ink);text-align:right}
+  .quad:hover{border-color:var(--accent)}
+  .quad b{font-size:.86rem;font-weight:600}
+  .quad small{display:block;color:var(--ink-2);font-size:.75rem}
+  .quad .cnt{font-size:.78rem;color:var(--ink-2);background:var(--soft);border-radius:20px;padding:2px 9px;white-space:nowrap}
+  .quad.full{border-color:var(--accent);background:var(--accent-soft)}
+  .quad.full .cnt{background:var(--accent);color:#fff}
+
+  /* side panel */
+  .panel{border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;align-self:start;position:sticky;top:16px}
+  .panel h3{margin:0;font-size:1.02rem;display:flex;justify-content:space-between;align-items:center}
+  .panel h3 span{font-size:.8rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:2px 10px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{font:inherit;font-size:.86rem;font-weight:600;border-radius:9px;padding:9px 10px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#0b626b;color:#fff}
+  .btn.ghost{color:#a33b3b}
+  .btn.ghost:hover{border-color:#a33b3b;color:#a33b3b}
+  .list{list-style:none;margin:0;padding:0;max-height:330px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+  .list li{display:flex;align-items:center;gap:10px;background:var(--soft);border-radius:9px;padding:7px 9px}
+  .list .n{min-width:34px;height:28px;display:grid;place-items:center;background:var(--accent);color:#fff;border-radius:7px;font-weight:700;font-size:.85rem}
+  .list .n.m{background:#5f8fb3}
+  .list .t{flex:1;font-size:.84rem;line-height:1.35}
+  .list .t small{display:block;color:var(--ink-2);font-size:.74rem}
+  .chip-x{border:0;background:transparent;color:var(--ink-2);font-size:1.1rem;cursor:pointer;border-radius:6px;width:26px;height:26px}
+  .chip-x:hover{background:#f3dede;color:#a33b3b}
+  .empty{color:var(--ink-2);font-size:.86rem;line-height:1.6;background:var(--soft);border-radius:10px;padding:14px;margin:0}
+
+  @media (max-width:900px){
+    body{padding:10px}
+    .dc{padding:14px}
+    .dc-body{grid-template-columns:1fr}
+    .panel{position:static}
+    .seg button{padding:7px 10px}
+  }
+</style>
+</head>
+<body>
+
+<div class="dc" id="dentalChart">
+  <div class="dc-head">
+    <div>
+      <h2>اختيار الأسنان المراد علاجها</h2>
+      <p>الترقيم وفق نظام FDI، والمخطط من منظور الطبيب المقابل للمريض.</p>
+    </div>
+    <div class="seg" role="group" aria-label="نوع الإطباق">
+      <button type="button" data-set="perm" aria-pressed="true">دائمة<small>بالغون</small></button>
+      <button type="button" data-set="mixed" aria-pressed="false">مختلطة<small>6–12 سنة</small></button>
+      <button type="button" data-set="prim" aria-pressed="false">لبنية<small>أطفال</small></button>
+    </div>
+  </div>
+
+  <div class="dc-body">
+    <div class="chart">
+      <svg id="dcSvg" viewBox="0 0 760 700" role="group" aria-label="مخطط الأسنان"></svg>
+      <div class="legend">
+        <span><i class="sw"></i>سن دائم</span>
+        <span><i class="sw m"></i>سن لبني</span>
+        <span><i class="sw s"></i>محدد للعلاج</span>
+      </div>
+      <div class="quads" id="dcQuads" dir="ltr"></div>
+    </div>
+
+    <aside class="panel">
+      <h3>الأسنان المحددة <span id="dcCount">0</span></h3>
+      <div class="actions">
+        <button type="button" class="btn primary" data-act="all">تحديد الكل</button>
+        <button type="button" class="btn ghost" data-act="clear">مسح التحديد</button>
+        <button type="button" class="btn" data-act="upper">الفك العلوي</button>
+        <button type="button" class="btn" data-act="lower">الفك السفلي</button>
+      </div>
+      <ul class="list" id="dcList"></ul>
+      <!-- القيمة المرسلة مع النموذج: أرقام مفصولة بفواصل مثل 16,26,36 -->
+      <input type="hidden" name="selected_teeth" id="selectedTeeth" value="">
+      <input type="hidden" name="dentition_type" id="dentitionType" value="perm">
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('dentalChart');
+  const svg  = document.getElementById('dcSvg');
+
+  /* عرض التاج بالمليمتر (تقريبي) لكل موضع */
+  const WIDTH = {
+    perm:{u:{1:8.5,2:6.5,3:7.5,4:7,5:6.5,6:10,7:9,8:8.5}, l:{1:5.3,2:5.9,3:6.9,4:7,5:7.1,6:11,7:10.5,8:10}},
+    prim:{u:{1:6.5,2:5.1,3:7,4:7.3,5:8.2},             l:{1:4.2,2:4.7,3:5,4:7.7,5:9.9}}
+  };
+  const TYPE = {perm:{1:'inc',2:'inc',3:'can',4:'pre',5:'pre',6:'mol',7:'mol',8:'mol'},
+                prim:{1:'inc',2:'inc',3:'can',4:'mol',5:'mol'}};
+  const NAME = {
+    perm:{1:'القاطعة المركزية',2:'القاطعة الجانبية',3:'الناب',4:'الضاحك الأول',5:'الضاحك الثاني',6:'الرحى الأولى',7:'الرحى الثانية',8:'الرحى الثالثة (العقل)'},
+    prim:{1:'القاطعة المركزية اللبنية',2:'القاطعة الجانبية اللبنية',3:'الناب اللبني',4:'الرحى اللبنية الأولى',5:'الرحى اللبنية الثانية'}
+  };
+  const QNAME = {1:'علوي أيمن',2:'علوي أيسر',3:'سفلي أيسر',4:'سفلي أيمن'};
+
+  /* تسلسل الأسنان في كل ربع حسب نوع الإطباق */
+  const SEQ = {
+    perm:[1,2,3,4,5,6,7,8].map(p=>({k:'perm',p})),
+    prim:[1,2,3,4,5].map(p=>({k:'prim',p})),
+    mixed:[{k:'perm',p:1},{k:'perm',p:2},{k:'prim',p:3},{k:'prim',p:4},{k:'prim',p:5},{k:'perm',p:6}]
+  };
+  const ARCH = { perm:{u:[285,215],l:[272,205]}, mixed:{u:[258,188],l:[246,180]}, prim:{u:[205,145],l:[196,138]} };
+
+  let set = 'perm';
+  const selected = new Set();
+  let teeth = [];   // {n, k, p, q}
+
+  const fdi = (q,k,p) => (k==='prim' ? q+4 : q)*10 + p;
+  const baseQ = n => { const q = Math.floor(n/10); return q>4 ? q-4 : q; };
+  const info = n => { const q=Math.floor(n/10), k=q>4?'prim':'perm', p=n%10;
+                      return {name:NAME[k][p], loc:QNAME[baseQ(n)], k}; };
+
+  /* ---------- أشكال التيجان (منظر إطباقي) — المحور y السالب = الجهة الدهليزية ---------- */
+  const f = v => v.toFixed(1);
+  function rrect(hw,hd,r){
+    return `M${f(-hw+r)} ${f(-hd)}H${f(hw-r)}Q${f(hw)} ${f(-hd)} ${f(hw)} ${f(-hd+r)}V${f(hd-r)}Q${f(hw)} ${f(hd)} ${f(hw-r)} ${f(hd)}H${f(-hw+r)}Q${f(-hw)} ${f(hd)} ${f(-hw)} ${f(hd-r)}V${f(-hd+r)}Q${f(-hw)} ${f(-hd)} ${f(-hw+r)} ${f(-hd)}Z`;
+  }
+  function shape(type, w, d){
+    const hw=w/2, hd=d/2;
+    if(type==='inc') return {
+      crown:`M${f(-hw)} ${f(-hd*.3)}C${f(-hw)} ${f(-hd*1.08)} ${f(hw)} ${f(-hd*1.08)} ${f(hw)} ${f(-hd*.3)}C${f(hw)} ${f(hd*.35)} ${f(hw*.42)} ${f(hd)} 0 ${f(hd)}C${f(-hw*.42)} ${f(hd)} ${f(-hw)} ${f(hd*.35)} ${f(-hw)} ${f(-hd*.3)}Z`,
+      groove:`M${f(-hw*.68)} ${f(-hd*.42)}Q0 ${f(-hd*.62)} ${f(hw*.68)} ${f(-hd*.42)}M0 ${f(hd*.25)}v${f(hd*.35)}`};
+    if(type==='can') return {
+      crown:`M0 ${f(-hd)}C${f(hw*.8)} ${f(-hd)} ${f(hw)} ${f(-hd*.25)} ${f(hw*.88)} ${f(hd*.25)}C${f(hw*.62)} ${f(hd*.95)} ${f(-hw*.62)} ${f(hd*.95)} ${f(-hw*.88)} ${f(hd*.25)}C${f(-hw)} ${f(-hd*.25)} ${f(-hw*.8)} ${f(-hd)} 0 ${f(-hd)}Z`,
+      groove:`M${f(-hw*.55)} ${f(-hd*.05)}L0 ${f(-hd*.55)}L${f(hw*.55)} ${f(-hd*.05)}M0 ${f(-hd*.55)}V${f(hd*.45)}`};
+    if(type==='pre') return {
+      crown:rrect(hw,hd,Math.min(hw,hd)*.85),
+      groove:`M${f(-hw*.55)} ${f(hd*.02)}Q0 ${f(hd*.16)} ${f(hw*.55)} ${f(hd*.02)}`};
+    return { /* mol */
+      crown:rrect(hw,hd,Math.min(hw,hd)*.5),
+      groove:`M${f(-hw*.66)} ${f(hd*.08)}C${f(-hw*.2)} ${f(-hd*.12)} ${f(hw*.2)} ${f(hd*.18)} ${f(hw*.66)} ${f(-hd*.06)}M${f(-hw*.06)} ${f(-hd*.68)}C${f(hw*.12)} ${f(-hd*.2)} ${f(-hw*.12)} ${f(hd*.22)} ${f(hw*.06)} ${f(hd*.68)}`};
+  }
+  const DEPTH = {inc:{u:.92,l:1.15}, can:{u:1.1,l:1.1}, pre:{u:1.28,l:1.12}, mol:{u:1.08,l:1.0}};
+
+  /* ---------- القوس السني: نصف قطع ناقص نوزّع عليه الأسنان حسب عرضها ---------- */
+  function arcTable(a,b){
+    const N=360, th=[0], s=[0];
+    let px=0, py=0;
+    for(let i=1;i<=N;i++){
+      const t=(Math.PI/2)*i/N, x=a*Math.sin(t), y=b*(1-Math.cos(t));
+      s.push(s[i-1]+Math.hypot(x-px,y-py)); th.push(t); px=x; py=y;
+    }
+    return {th,s,L:s[N]};
+  }
+  function thetaAt(tab,len){
+    let i=1; while(i<tab.s.length-1 && tab.s[i]<len) i++;
+    const r=(len-tab.s[i-1])/(tab.s[i]-tab.s[i-1]||1);
+    return tab.th[i-1]+r*(tab.th[i]-tab.th[i-1]);
+  }
+
+  function render(){
+    const seq = SEQ[set], cx=380, mid=350, gap=38;
+    let html='', idx=0;
+    teeth=[];
+
+    ['u','l'].forEach(jaw=>{
+      const [a,b]=ARCH[set][jaw];
+      const tab=arcTable(a,b);
+      const up = jaw==='u';
+      const apexY = up ? mid-gap-b : mid+gap+b;
+      const widths = seq.map(t=>WIDTH[t.k][jaw][t.p]);
+      const g=1.6, sum=widths.reduce((x,y)=>x+y,0);
+      const scale=(tab.L*.985-g*(seq.length-.5))/sum;
+
+      // اللثة
+      let gumPts=[];
+      for(let i=0;i<=40;i++){ const t=(Math.PI/2)*i/40;
+        gumPts.push([a*Math.sin(t), b*(1-Math.cos(t))]); }
+      const pts=[...gumPts.slice().reverse().map(([x,y])=>[cx-x,y]), ...gumPts.slice(1).map(([x,y])=>[cx+x,y])]
+        .map(([x,y])=>`${f(x)},${f(up?apexY+y:apexY-y)}`).join(' ');
+      html+=`<polyline class="gum" points="${pts}" stroke-width="${f(Math.min(scale,7)*9)}"/>`;
+
+      [-1,1].forEach(sx=>{
+        // sx=-1 : يسار الشاشة = يمين المريض (الربع 1 علوياً، 4 سفلياً)
+        const q = up ? (sx<0?1:2) : (sx<0?4:3);
+        let run=g/2;
+        seq.forEach((t,i)=>{
+          const w=widths[i]*scale, type=TYPE[t.k][t.p];
+          const d=w*DEPTH[type][jaw];
+          const th=thetaAt(tab, run+w/2);
+          run+=w+g;
+          const x=cx+sx*a*Math.sin(th);
+          const y=up ? apexY+b*(1-Math.cos(th)) : apexY-b*(1-Math.cos(th));
+          const phi=Math.atan2(b*Math.sin(th), a*Math.cos(th))*180/Math.PI;
+          const sy=up?1:-1;
+          const rad=phi*Math.PI/180;
+          const nx=sx*Math.sin(rad), ny=-sy*Math.cos(rad);
+          const off=d/2+13;
+          const n=fdi(q,t.k,t.p), sh=shape(type,w,d), inf=info(n);
+          teeth.push({n,q});
+          html+=`<g class="tooth ${t.k==='prim'?'prim':''} ${selected.has(n)?'on':''}" data-n="${n}" tabindex="0" role="checkbox"
+                   aria-checked="${selected.has(n)}" aria-label="${n} ${inf.name} ${inf.loc}" style="--i:${idx++}">
+                   <title>${n} — ${inf.name} (${inf.loc})</title>
+                   <g transform="translate(${f(x)} ${f(y)}) scale(${sx} ${sy}) rotate(${f(phi)})">
+                     <path class="crown" d="${sh.crown}"/><path class="groove" d="${sh.groove}"/>
+                   </g>
+                   <text class="num" x="${f(x+nx*off)}" y="${f(y+ny*off)}">${n}</text>
+                 </g>`;
+        });
+      });
+    });
+
+    // خط المنتصف والتسميات
+    html = `<line class="mid" x1="380" y1="20" x2="380" y2="680"/>
+            <text class="side" x="18" y="${mid+4}">يمين المريض</text>
+            <text class="side" x="742" y="${mid+4}" text-anchor="end">يسار المريض</text>
+            <text class="jaw" x="380" y="${mid-8}">الفك العلوي</text>
+            <text class="jaw" x="380" y="${mid+20}">الفك السفلي</text>` + html;
+    svg.innerHTML = html;
+
+    // إبقاء المحدد الموجود فقط في الإطباق الحالي
+    const valid=new Set(teeth.map(t=>t.n));
+    [...selected].forEach(n=>{ if(!valid.has(n)) selected.delete(n); });
+    renderQuads(); sync();
+  }
+
+  function renderQuads(){
+    const order=[1,2,4,3]; // يطابق ترتيب المخطط بصرياً
+    const box=document.getElementById('dcQuads');
+    box.innerHTML = order.map(q=>{
+      const ns=teeth.filter(t=>t.q===q).map(t=>t.n);
+      const sorted=[...ns].sort((x,y)=>x-y), runs=[];
+      sorted.forEach(n=>{ const r=runs[runs.length-1]; (r && n===r[1]+1) ? r[1]=n : runs.push([n,n]); });
+      const range = runs.map(([x,y])=>x===y?`${x}`:`${x}-${y}`).join(', ');
+      return `<button type="button" class="quad" data-q="${q}" dir="rtl">
+                <span><b>الربع ${q} <bdi dir="ltr">(${range})</bdi></b><small>${QNAME[q]}</small></span>
+                <span class="cnt" data-cnt="${q}">0/${ns.length}</span></button>`;
+    }).join('');
+  }
+
+  function sync(){
+    svg.querySelectorAll('.tooth').forEach(g=>{
+      const on=selected.has(+g.dataset.n);
+      g.classList.toggle('on',on); g.setAttribute('aria-checked',on);
+    });
+    [1,2,3,4].forEach(q=>{
+      const ns=teeth.filter(t=>t.q===q).map(t=>t.n);
+      const c=ns.filter(n=>selected.has(n)).length;
+      const el=document.querySelector(`[data-cnt="${q}"]`);
+      if(el){ el.textContent=`${c}/${ns.length}`; el.parentElement.classList.toggle('full',c===ns.length); }
+    });
+    const list=[...selected].sort((a,b)=>a-b);
+    document.getElementById('dcCount').textContent=list.length;
+    document.getElementById('selectedTeeth').value=list.join(',');
+    document.getElementById('dentitionType').value=set;
+    const ul=document.getElementById('dcList');
+    ul.innerHTML = list.length ? list.map(n=>{ const i=info(n);
+      return `<li><span class="n ${i.k==='prim'?'m':''}">${n}</span>
+              <span class="t">${i.name}<small>${i.loc}${i.k==='prim'?'، لبني':''}</small></span>
+              <button type="button" class="chip-x" data-rm="${n}" aria-label="إزالة السن ${n}">×</button></li>`;}).join('')
+      : `<p class="empty">اضغط على أي سن في المخطط لإضافته، أو اختر ربعاً كاملاً من الأزرار أسفل المخطط.</p>`;
+    root.dispatchEvent(new CustomEvent('teeth-change',{detail:{dentition:set,teeth:list}}));
+  }
+
+  function toggleGroup(ns){
+    const all=ns.every(n=>selected.has(n));
+    ns.forEach(n=> all?selected.delete(n):selected.add(n));
+    sync();
+  }
+
+  svg.addEventListener('click',e=>{
+    const g=e.target.closest('.tooth'); if(!g) return;
+    const n=+g.dataset.n; selected.has(n)?selected.delete(n):selected.add(n); sync();
+  });
+  svg.addEventListener('keydown',e=>{
+    if((e.key==='Enter'||e.key===' ') && e.target.classList.contains('tooth')){ e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click',{bubbles:true})); }
+  });
+  document.getElementById('dcQuads').addEventListener('click',e=>{
+    const b=e.target.closest('.quad'); if(!b) return;
+    toggleGroup(teeth.filter(t=>t.q===+b.dataset.q).map(t=>t.n));
+  });
+  root.querySelector('.actions').addEventListener('click',e=>{
+    const a=e.target.dataset.act; if(!a) return;
+    if(a==='clear'){ selected.clear(); sync(); return; }
+    const pick = a==='all'? teeth : teeth.filter(t=> a==='upper' ? t.q<=2 : t.q>=3);
+    pick.forEach(t=>selected.add(t.n)); sync();
+  });
+  document.getElementById('dcList').addEventListener('click',e=>{
+    const n=e.target.dataset.rm; if(n){ selected.delete(+n); sync(); }
+  });
+  root.querySelectorAll('.seg button').forEach(btn=>btn.addEventListener('click',()=>{
+    set=btn.dataset.set;
+    root.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b===btn));
+    render();
+  }));
+
+  /* واجهة بسيطة للدمج مع باقي النظام */
+  window.DentalChart = {
+    get: ()=>[...selected].sort((a,b)=>a-b),
+    set: arr=>{ selected.clear(); arr.forEach(n=>selected.add(+n)); render(); },
+    dentition: t=>{ const b=root.querySelector(`.seg [data-set="${t}"]`); b && b.click(); }
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

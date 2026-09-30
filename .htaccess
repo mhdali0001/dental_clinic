@@ -1,0 +1,4 @@
+# منع الوصول إلى ملف .env من المتصفح
+<Files ".env">
+    Require all denied
+</Files>

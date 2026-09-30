@@ -1,10 +1,12 @@
 <?php
-// إعدادات قاعدة البيانات
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'dental_clinic');
-define('DB_USER', 'sali'); // غير اسم المستخدم حسب إعدادات الخادم
-define('DB_PASS', 'sali'); // غير كلمة المرور حسب إعدادات الخادم
-define('DB_CHARSET', 'utf8mb4');
+require_once __DIR__ . '/env.php';
+
+// إعدادات قاعدة البيانات (تُقرأ من ملف .env)
+define('DB_HOST', env('DB_HOST', 'localhost'));
+define('DB_NAME', env('DB_NAME', 'dental_clinic'));
+define('DB_USER', env('DB_USER', 'root'));
+define('DB_PASS', env('DB_PASS', ''));
+define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
 class Database {
     private $pdo;
